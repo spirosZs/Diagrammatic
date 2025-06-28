@@ -1,0 +1,25 @@
+<!-- Add Path Modal -->
+<div class="modal fade" id="addPathModal" tabindex="-1" role="dialog" aria-labelledby="addPathModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPathModalLabel">
+                    Add New Path
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+
+            </div>
+            <div class="modal-body" id="addPathModalBody">
+                Add a path by writing the number of the nodes separated with commas e.g. 1,2,3
+                <input type="text" class="form-control" id="new_path" />
+            </div>
+            <div class="modal-footer">
+                <span id="notvalid" style="color:red;float:left;display:none;">Not valid!</span>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="save_new_path">Save</button>
+            </div>
+        </div>
+    </div>
+</div>

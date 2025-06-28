@@ -1,0 +1,48 @@
+version: '3.2'
+services:
+  web:
+    image: web
+    build:
+      context: .
+      dockerfile: Exercises/Dockerfile
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+#      - ASPNETCORE_URLS=https://+:443;http://+:80
+#      - ASPNETCORE_URLS=http://*:$PORT #FOR HEROKU
+      - ConnectionStrings__ExercisesContext=Server=db;Database=master;User=sa;Password=fbQ6ll9PQplNs2n;Encrypt=False;TrustServerCertificate=True;
+    ports:
+#      - "80:80"
+#      - "443:443"
+      - "8083:8080"
+      - "63342:8080" #DEBUG PORT
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+  db:
+    image: "mcr.microsoft.com/mssql/server:2017-latest-ubuntu"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "fbQ6ll9PQplNs2n"
+      MSSQL_PID: Express
+#      MSSQL_TCP_PORT: "1433"
+    ports:
+      - "3314:1433"
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "fbQ6ll9PQplNs2n", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  worker:
+    image: worker
+    build:
+      context: .
+      dockerfile: Worker/Dockerfile
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web

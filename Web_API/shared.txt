@@ -1,0 +1,85 @@
+namespace Exercises.Common.Authorization.Requests
+{
+    public class UserLoginRequest
+    {
+        public string Email { get; set; }
+
+        public string Password { get; set; }
+    }
+}
+
+
+namespace Exercises.Common.Authorization.Requests
+{
+    public class RefreshTokenRequest
+    {
+        public string Token { get; set; }
+
+        public string RefreshToken { get; set; }
+    }
+}
+
+using System.Collections.Generic;
+
+namespace Exercises.Common.Authorization.Responses
+{
+    public class AuthFailedResponse
+    {
+        public IEnumerable<string> Errors { get; set; }
+    }
+}
+
+namespace Exercises.Common.Authorization.Responses
+{
+    public class AuthSuccessResponse
+    {
+        public string Token { get; set; }
+
+        public string RefreshToken { get; set; }
+    }
+}
+
+namespace Exercises.Common.Authorization.Responses
+{
+    public class ErrorModel
+    {
+        public string FieldName { get; set; }
+
+        public string Message { get; set; }
+    }
+}
+
+using System.Collections.Generic;
+
+namespace Exercises.Common.Authorization.Responses
+{
+    public class ErrorResponse
+    {
+        public ErrorResponse(){}
+
+        public ErrorResponse(ErrorModel error)
+        {
+            Errors.Add(error);
+        }
+        
+        public List<ErrorModel> Errors { get; set; } = new List<ErrorModel>();
+        
+        
+    }
+}
+
+
+namespace Exercises.Common.Authorization.Responses
+{
+    public class Response<T>
+    {
+        public Response() {}
+
+        public Response(T response)
+        {
+            Data = response;
+        }
+
+        public T Data { get; set; }
+    }
+}

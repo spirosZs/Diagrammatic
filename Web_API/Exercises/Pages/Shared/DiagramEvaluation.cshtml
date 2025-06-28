@@ -1,0 +1,16 @@
+@{
+    ViewData["Title"] = "Evaluate Exercise";
+    Layout = "_LayoutBlank";
+}
+
+<div style="display: none">
+    <partial name="Partials/Code"/>
+</div>
+
+<partial name="Partials/Diagram"/>
+
+@section scripts {
+    <script src="~/lib/ace/ace.js"></script>
+    <script src="~/lib/ace/mode-javascript.js"></script>
+    <script src="~/js/newdiagram.js"></script>
+}

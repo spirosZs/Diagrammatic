@@ -1,0 +1,46 @@
+Mgo+DSMBMAY9C3t2VlhhQlJCfV5AQmBIYVp/TGpJfl96cVxMZVVBJAtUQF1hSn9Td0diWnxYcHdVRmVc
+Ngo9BigBOggjHTQxAR8/V1NHaF5cXmVCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdgWH9dcHVVRmZYWEJzW0c=
+Mjc4NzI5N0AzMTM3MmUzMTJlMzBqSFBObU1UOEJhNnhKRVFpMjhxQ0wvS1lrcjFiYjYzbXRVZCtWNGpjZmJjPQ==
+MjgxNTkyMEAzMTM3MmUzMTJlMzBYdzk4TUVYVlBwcHYwcVJnTkFqM3lqSzMycEkvcWFEVFM4OU1SczNIWXdBPQ==
+Mgo+DSMBMAY9C3t2VlhiQlVPd11dXmJWd1p/THNYflR1fV9DaUwxOX1dQl9gSH9RdkVmXH1ec3ZWR2g=
+
+
+
+MjgyMDY3OEAzMTM3MmUzMTJlMzBIN2Jsc1orbk55eXBzSFp2Z1NqRUZrbmtyc0oyeUdNZGR6aitJRTlmQnc0PQ==;MjgyMDY3OUAzMTM3MmUzMTJlMzBuL2NxVWJOV3VpSlVZMWlpU1BQYkhCcUltRysvWDZUeXdOZXhMRVJER3JNPQ==;MjgyMDY4MEAzMTM3MmUzMTJlMzBRUWo4b2FIUVArdUsxTUh1dmFTdWZXOENHamgxeXhKRFQ4VFFqdW9BdDVNPQ==;MjgyMDY4MUAzMTM3MmUzMTJlMzBWR0tCVmJYb0VkbHZsd1hSV1VyU2FMQzBZZ05BZnYybTVnQk9IdG9qb2hrPQ==;MjgyMDY4MkAzMTM3MmUzMTJlMzBMOFExYVhCNGloTEFoWnB3enY0Y2R0enAvRUh6ZDI2eU16ZDh1Y3RNbXFjPQ==;MjgyMDY4M0AzMTM3MmUzMTJlMzBnN0FYdjQ5amVsOWJncERBTjVXRFg0a0FhRGpzZ1JVQ0JPdVROdkpTLzJFPQ==;MjgyMDY4NEAzMTM3MmUzMTJlMzBFK0YwVEIzeXFOdDNyVU04NlQ0UTJYemVVdmQzdENCcUVFdVRvTkdOU2QwPQ==;MjgyMDY4NUAzMTM3MmUzMTJlMzBISk9vNWF1b0JRRmNTWDEwSDhhejlQTmF5MHVIZkFCREE0TG1helhjdHBVPQ==;MjgyMDY4NkAzMTM3MmUzMTJlMzBRWlJQbzg2VTJSL25mK3lhc1E4c3N5ZjVRZFlGVVRPWXZncVdIV2R3Y3hzPQ==;MjgyMDY4N0AzMTM3MmUzMTJlMzBnamlBWjJiS2RoWmw2SU02UVMyTHEzSHFzM282K2hGcWtlTlRONjBNTzRnPQ==
+
+$ docker run --name diagrammatic -p 3306:3306 -e MYSQL_ROOT_PASSWORD=mpip1048 -d mysql:tag
+
+fbQ6ll9PQplNs2n
+
+db connection string 
+data source=7d95ac9f3cf6;initial catalog=master;user id=sa
+Server=localhost\lamdnanet-diagramatic-web-api-kosmas-8c0f55d7585f-db-1,3314;Database=master;Trusted_Connection=True;
+
+Auth0:
+Domain: dev-bnnhp6noi7k0ebuv.us.auth0.com
+ID: DscQGD0oUn4PhMTuPFXbS9VCvWw0sdOr
+------------------------------------------db context----------------------------------------------------------------------
+public class DiagrammaticContext : IdentityDbContext<DiagrammaticUser, IdentityRole<Guid>, Guid>
+{
+    protected readonly IConfiguration _configuration;
+    public DiagrammaticContext(DbContextOptions<DiagrammaticContext> options, IConfiguration configuration)
+        : base(options)
+    {
+        _configuration = configuration;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        //connect sql server with connection string from app settings
+        optionsBuilder.UseSqlServer(_configuration.GetConnectionString("DiagrammaticContextConnection"));
+    }
+
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+        // Customize the ASP.NET Identity model and override the defaults if needed.
+        // For example, you can rename the ASP.NET Identity table names and more.
+        // Add your customizations after calling base.OnModelCreating(builder);
+    }
+}

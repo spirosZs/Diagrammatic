@@ -1,0 +1,160 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Diagrammatic Api";
+}
+
+<section>
+    <h1>
+        SignalR
+    </h1>
+    <p>
+        This section describes how to connect and use the signalR events exposed by the api.
+    </p>
+    <h3>Connection</h3>
+    <p>
+        The connection url should be <strong>@Request.Scheme://@Request.Host/gameHub</strong>.<br/>
+        All responses indicate that an event occured and the parameters returned describe the necessary values
+        required to call the api and obtain more info about the actual resource. <br/>
+        You should implement only those events you need and ignore event messages you are not interested in.
+    </p>
+    <h3>Events</h3>
+    <style type="text/css">
+        .signalr-table{
+        
+        }
+        .signalr-table i{
+            background: yellow;
+        }
+        .signalr-table th{
+            padding: 8px;
+        }
+        .signalr-table ul{
+            padding-left: 16px;
+        }
+        .signalr-table td{
+        padding: 8px;
+            border: 1px dotted black;
+        }
+    </style>
+    <table class="signalr-table">
+        <thead>
+        <tr>
+            <th>Method Name</th>
+            <th>Event Name</th>
+            <th>Occurs</th>
+            <th>Parameters</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Notify</td>
+            <td>Started</td>
+            <td>When a game has started.</td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        <tr>
+            <td>Ended</td>
+            <td>Updated</td>
+            <td>When a game has ended.</td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        <tr>
+            <td>Notify</td>
+            <td>Updated</td>
+            <td>When a generic parameter like the participation code changes.</td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        <tr>
+            <td>Notify</td>
+            <td>ExerciseCompleted</td>
+            <td>
+                <ul>
+                    <li>When the coundown to complete the exercise reaches 0.</li>
+                    <li>When all students have completed the exercise.</li>
+                    <li>When the teacher skips the exercise.</li>
+                </ul>
+            </td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        <tr>
+            <td>Notify</td>
+            <td>ExerciseTimeChanged</td>
+            <td>
+                <ul>
+                    <li>When the coundown to complete the exercise reaches 0.</li>
+                    <li>When all students have completed the exercise.</li>
+                    <li>When the teacher skips the exercise.</li>
+                </ul>
+            </td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        <tr>
+            <td>Notify</td>
+            <td>ParticipantEntered</td>
+            <td>When a student joins the game.</td>
+            <td>
+                <ul>
+                    <li>{examId}</li>
+                    <li>{userId}</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>Notify</td>
+            <td>ParticipantLeft</td>
+            <td>When a student leaves the game. <i>not implemented yet</i></td>
+            <td>
+                {examId}
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+
+
+<section>
+    <h1>
+        Test Evaluation
+    </h1>
+    <p>
+        This section is used to test the evaluation algorithm. <br/>
+        First, create a diagram on the <a href="#pSource">Source</a> panel and then press the <a href="#cloneBtn">Clone To Destination</a> button.<br/>
+        Now you should see a copy of the source diagram to the <a href="#pDestination">Destination</a> panel. <br/>
+        Any changes made to the <a href="#pDestination">Destination</a> panel diagram will update the <a href="#pScore">Score</a> section.
+    </p>
+
+    <div>
+        <h2 id="pScore">Score <span id="score" class="badge badge-primary">-</span></h2>
+    </div>
+    <div style="display: flex; height: 80vh">
+        <div id="pSource"style="flex: 1">
+            <h2 >Source</h2>
+            <div>
+                <button id="cloneBtn" class="btn btn-primary">Clone To Destination</button>
+            </div>
+            <iframe id="srcIframe" width="100%" height="100%" src="/diagramEvaluation"></iframe>
+        </div>
+        <div id="pDestination" style="flex: 1">
+            <h2>Destination</h2>
+            <div>
+                <button id="updateBtn" class="btn btn-primary">Update Score</button>
+            </div>
+            <iframe id="destIframe" width="100%" height="100%" src="/diagramEvaluation"></iframe>
+        </div>
+    </div>
+</section>
+
+@section scripts {
+    <script src="~/js/compare.js"></script>
+}

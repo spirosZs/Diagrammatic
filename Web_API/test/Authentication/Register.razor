@@ -1,0 +1,59 @@
+﻿@page "/register"
+@using Diagrammatic2.Components.Shared.Requests
+@using Diagrammatic2.Components.Shared.Responses
+@inject IHttpClientFactory HttpClientFactory
+<h1>Register</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="@registrationModel" OnValidSubmit="RegisterUser" FormName="registerForm">
+            <DataAnnotationsValidator />
+            <h2>Create a new account.</h2>
+            <hr />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText id="email" @bind-Value="registrationModel.email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <label for="email">Email</label>
+                <ValidationMessage For="() => registrationModel.email" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText id="password" type="password" @bind-Value="registrationModel.password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label for="password">Password</label>
+                <ValidationMessage For="() => registrationModel.password" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            
+            @if (!string.IsNullOrEmpty(responseMessage)) //Display the responseMessage to give feedback to the user.
+            {
+                <div class="mt-3 alert alert-info">@responseMessage</div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+@code {
+
+    private UserRegistrationRequest registrationModel = new UserRegistrationRequest();
+    private string responseMessage;
+
+    private async Task RegisterUser()
+    {
+        
+        var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+        var response = await httpClient.PostAsJsonAsync("identity/register", registrationModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var authSuccessResponse = await response.Content.ReadFromJsonAsync<AuthSuccessResponse>();
+            responseMessage = $"Registration successful! Token: {authSuccessResponse.Token}";
+        }
+        else
+        {
+            var authFailedResponse = await response.Content.ReadFromJsonAsync<AuthFailedResponse>();
+            responseMessage = "Registration failed: " + string.Join(", ", authFailedResponse.Errors);
+        }
+    }
+
+}
+    
+

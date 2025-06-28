@@ -1,0 +1,370 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Exercises.Common</name>
+    </assembly>
+    <members>
+        <member name="P:Exercises.Common.Diagram.DiagramCreateDto.Url">
+            <summary>
+            A url string of an image for this diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Diagram.DiagramCreateDto.Definition">
+            <summary>
+            A json definition of this diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Diagram.DiagramDto.Url">
+            <summary>
+            A url string of an image for this diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Diagram.DiagramDto.Definition">
+            <summary>
+            A json definition of this diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Diagram.DiagramUpdateDto.Url">
+            <summary>
+            A url string of an image for this diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Diagram.DiagramUpdateDto.Definition">
+            <summary>
+            A json definition of this diagram.
+            </summary>
+        </member>
+        <member name="M:Exercises.Common.Diagram.Graph.ComparePaths(System.String[],System.String[])">
+            <summary>
+            Compares two sets of paths.
+            </summary>
+            <param name="input"></param>
+            <param name="correct"></param>
+            <returns>An evaluation of the input based on the correct paths.</returns>
+        </member>
+        <member name="M:Exercises.Common.Diagram.Graph.CompareGraphs(Exercises.Common.Diagram.Graph,Exercises.Common.Diagram.Graph)">
+            <summary>
+            This function is used to compare two graphs.
+            In order for this to work the first and last node of the two graphs must be the same.
+            </summary>
+            <param name="input"></param>
+            <param name="correct"></param>
+            <returns>An evaluation of the input based on the correct graph</returns>
+        </member>
+        <member name="P:Exercises.Common.EntityCreateDtoBase.Name">
+            <summary>
+            Name of the entity
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityCreateDtoBase.Published">
+            <summary>
+            Specifies whether this entity is published or not.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityDtoBase.Name">
+            <summary>
+            Name of the entity
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityDtoBase.Created">
+            <summary>
+            The date this entity was created.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityDtoBase.Id">
+            <summary>
+            A unique identifier for this entity.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityDtoBase.Published">
+            <summary>
+            Whether this entity is published or not.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityUpdateDtoBase.Name">
+            <summary>
+            Name of the entity
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.EntityUpdateDtoBase.Published">
+            <summary>
+            Specifies whether this entity is published or not.
+            </summary>
+        </member>
+        <member name="T:Exercises.Common.Exam.ExamCreateDto">
+            <summary>
+            An object to g
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exam.ExamCreateDto.ExerciseCollectionId">
+            <summary>
+            The exercise collection Guid to create an exam from
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exam.ExamCreateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exam.ExamDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exam.ExamUpdateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="T:Exercises.Common.Exam.ExamFilter">
+            <summary>
+            An object that holds query parameters to filter a collection of exams.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exam.ExamFilter.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionCreateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionExercisesOperationDto.Operation">
+            <summary>
+            The operation to perform.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionExercisesOperationDto.ExerciseId">
+            <summary>
+            The Exercise id to either add or remove to this Exercise Collection.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionFilter.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionUpdateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionWithExercisesDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.ExerciseCollection.ExerciseCollectionWithExercisesDto.Exercises">
+            <summary>
+            A list with all the exercises inside this Exercise Collection.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseCreateDto.Diagram">
+            <summary>
+            The diagram solution for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseCreateDto.Code">
+            <summary>
+            The code that will be presented to the students when asked to find the correct diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseDto.Diagram">
+            <summary>
+            The diagram solution for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseDto.Code">
+            <summary>
+            The code that will be presented to the students when asked to find the correct diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseUpdateDto.Diagram">
+            <summary>
+            The diagram solution for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.DiagramExerciseUpdateDto.Code">
+            <summary>
+            The code that will be presented to the students when asked to find the correct diagram.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseCreateDto.ProblemType">
+            <summary>
+            The problem type identifies the type of the exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseCreateDto.ExerciseCollectionId">
+            <summary>
+            The id of the exercise collection that contains this exercise. You can omit that and place this exercise later to an Exercise Collection.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseCreateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseCreateDto.Weight">
+            <summary>
+            The weight attribute is used to sort exercises inside an Exercise Collection.
+            Lower weight value means that this exercise will be placed above other exercises with bigger weight values.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseDto.ProblemType">
+            <summary>
+            The problem type identifies the type of the exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseDto.Weight">
+            <summary>
+            The weight attribute is used to sort exercises inside an Exercise Collection.
+            Lower weight value means that this exercise will be placed above other exercises with bigger weight values.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseDto.ExerciseCollectionId">
+            <summary>
+            The id of the exercise collection that contains this exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseFilter.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseUpdateDto.Category">
+            <summary>
+            A string representing a category label for this entity.
+            </summary> 
+        </member>
+        <member name="P:Exercises.Common.Exercise.ExerciseUpdateDto.Weight">
+            <summary>
+            The weight attribute is used to sort exercises inside an Exercise Collection.
+            Lower weight value means that this exercise will be placed above other exercises with bigger weight values.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathDto.Path">
+            <summary>
+            The path definition.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathDto.Credits">
+            <summary>
+            Defines how important is this path in relation with the other paths for this exercise.
+            This value affects the final score for this exercise. 
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseCreateDto.Diagram">
+            <summary>
+            A diagram definition for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseCreateDto.Paths">
+            <summary>
+            The correct paths solution for this Exercise as specified by the teacher.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseCreateDto.Code">
+            <summary>
+            The code that will be presented to the students when asked to find the correct paths.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseDto.Diagram">
+            <summary>
+            A diagram definition for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseDto.Paths">
+            <summary>
+            The correct paths solution for this Exercise as specified by the teacher.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseUpdateDto.Diagram">
+            <summary>
+            A diagram definition for this Exercise.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseUpdateDto.Paths">
+            <summary>
+            The correct paths solution for this Exercise as specified by the teacher.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Exercise.PathExerciseUpdateDto.Code">
+            <summary>
+            The code that will be presented to the students when asked to find the correct paths.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.FilterBase.Created">
+            <summary>
+            The date that this entity was created
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.FilterBase.Name">
+            <summary>
+            Name of the entity
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.FilterBase.OrderBy">
+            <summary>
+            The field that should be used to order the results.
+            Defaults to "Name"
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.PaginationFilter.PageSize">
+            <summary>
+            Specifies the number of items returned in each page. Cannot be greater than 20 items per page, 
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.PaginationFilter.PageNumber">
+            <summary>
+            Specifies the current page offset.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionCreateDto.ExamId">
+            <summary>
+            The Exam id reference for this submission.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionCreateDto.ExerciseId">
+            <summary>
+            The Exercise id reference for this submission.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionCreateDto.Data">
+            <summary>
+            The contents of the submission data.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionDto.ExamId">
+            <summary>
+            The Exam id reference for this submission.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionDto.ExerciseId">
+            <summary>
+            The Exercise id reference for this submission.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionDto.Data">
+            <summary>
+            The contents of the submission data.
+            </summary>
+        </member>
+        <member name="P:Exercises.Common.Submission.SubmissionDto.Score">
+            <summary>
+            The score on this exercise.
+            </summary>
+        </member>
+    </members>
+</doc>

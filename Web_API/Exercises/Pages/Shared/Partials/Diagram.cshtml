@@ -1,0 +1,46 @@
+<div class="row">
+    <div class="col-lg-3 col-sm-3 control-section step1_2" id="palette-space" style="height:100%;">
+        <div class="row">
+            <ejs-symbolpalette id="symbolpalette" allowDrag="true" enableAnimation="false" getNodeDefaults="@ViewBag.getNodeDefaults" symbolHeight="80" symbolWidth="80" getSymbolInfo="@ViewBag.getSymbolInfo" palettes="@ViewBag.palettes">
+            </ejs-symbolpalette>
+        </div>
+        <div class="row" style="padding-top: 10px;font-family: 'Saira', sans-serif !important;">
+            <ejs-checkbox id="checked" checked="true" label="Continuous Draw" change="onChangeData"></ejs-checkbox>
+        </div>
+        <div class="row" style="padding-top: 10px">
+            <ejs-uploader id="fileupload" success="onUploadSuccess">
+                <e-uploader-asyncsettings saveUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Save" removeUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Remove">
+                </e-uploader-asyncsettings>
+            </ejs-uploader>
+        </div>
+    </div>
+    <div class="col-lg-9 col-sm-9 control-section">
+        <div class="row step1_2">
+            <ul style="padding: 0px!important;width:100%">
+                <li class="customdropdown" style="border-right: 1px solid white;width:20%;">
+                    <a class="dropbtn">File  <i class="fas fa-caret-down" style="float:right;"></i></a>
+                    <div class="dropdown-content">
+                        <a class="toolbarClick" id="Upload_Tool"><i class="far fa-folder-open"></i> Open</a>
+                        <a class="toolbarClick" id="Download_Tool"><i class="fas fa-file-download"></i> Save</a>
+                    </div>
+                </li>
+                <li id="straight" class="connectors tools tools_select" style="width:10%;"><a class="btn-connector straight-connector">&nbsp;</a></li>
+                <li id="cubic" class="connectors tools tools_select" style="width:10%;"><a class="btn-connector cubic-connector">&nbsp;</a></li>
+                <li id="MoveTool_Tool" class="toolbarClick tools tools_select" style="width:10%;text-align: center;" title="Move"><a><i class="fas fa-mouse-pointer"></i></a></li>
+                <li id="Pan_Tool" class="toolbarClick tools tools_select" style="width:10%;text-align: center;" title="Pan"><a><i class="fas fa-hand-paper"></i></a></li>
+                <li id="Undo_Tool" class="toolbarClick tools" title="Undo" style="border-left: 1px solid white;width:10%;text-align: center;"><a><i class="fas fa-undo"></i></a></li>
+                <li id="Redo_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Redo"><a><i class="fas fa-redo"></i></a></li>
+                <li id="FitToPage_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Fit to Page"><a><i class="fas fa-expand-arrows-alt"></i></a></li>
+                <li id="Delete_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Delete"><a><i class="far fa-trash-alt"></i></a></li>
+
+            </ul>
+        </div>
+        <div class="row" style="padding: 0px!important;box-shadow: 1px 4px 5px 0px grey;">
+            <ejs-diagram created="diagramCreated" id="diagram" height="540px" drop="drop" childrenChanging="dragLeave" collectionChange="collectionChange">
+                <e-diagram-rulersettings showRulers="false" dynamicGrid="true"></e-diagram-rulersettings>
+            </ejs-diagram>
+        </div>
+    </div>
+</div>
+
+

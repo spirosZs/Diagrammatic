@@ -1,0 +1,328 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Exercises</name>
+    </assembly>
+    <members>
+        <member name="M:Exercises.Controllers.DiagramsController.GetSuggestedPaths(Exercises.Common.Diagram.DiagramDefinitionDto,System.Threading.CancellationToken)">
+            <summary>
+            Get Suggested Paths
+            </summary>
+            <remarks>
+            Get a collection of paths that can be exported from a diagram definition.
+            </remarks>
+            <param name="diagramDefinitionDto">A json definition of a diagram.</param>
+            <response code="200">Returns an array of all the paths paths.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.DiagramsController.Compare(Exercises.Common.Diagram.DiagramCompareDto,System.Threading.CancellationToken)">
+            <summary>
+            Get diagram evaluation
+            </summary>
+            <remarks>
+            This endpoint is used to test the evaluation algorithm.
+            </remarks>
+            <param name="compareDto">A json definition of a diagram.</param>
+            <response code="200">Returns the score for this evaluation.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="T:Exercises.Controllers.ExamController">
+            <summary>
+            An Exam is based on an Exercise Collection that was previously created by the teacher
+            and can receive user submissions.
+            </summary>
+        </member>
+        <member name="M:Exercises.Controllers.ExamController.GetAsync(Exercises.Common.Exam.ExamFilter,System.Threading.CancellationToken)">
+            <summary>
+            Get a collection of Exams.
+            </summary>
+            <param name="filter">Query parameters to send to filter the returned results.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="400">Bad request.</response>
+        </member>
+        <member name="M:Exercises.Controllers.ExamController.GetAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get a single Exam.
+            </summary>
+            <param name="id">The id of the Exam to return.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExamController.CreateAsync(Newtonsoft.Json.Linq.JObject,System.Threading.CancellationToken)">
+            <summary>
+            Create an Exam.
+            </summary>
+            <remarks>
+            An Exam is based on an Exercise Collection. This means that when creating an Exam you actually copy an Exercise Collection
+            and convert it to an Exam. Please note that while you will be able to modify the values and create further exams
+            from the same Exercise Collection that this Exam was based of, you will not be able to alter the definitions that exist in
+            this Exam apart from the basic entity definitions like the name, etc.
+            </remarks>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="201">Returns the newly created Exam.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExamController.UpdateAsync(System.Guid,Newtonsoft.Json.Linq.JArray,System.Threading.CancellationToken)">
+            <summary>
+            Update an Exam.
+            </summary>
+            <param name="id">The id of the Exam to update.</param>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <remarks>
+            This endpoint exists so that the teacher can modify basic entity definitions like the name, published etc.
+            Notice that you cannot add/remove exercises from an Exam.
+            </remarks>
+            <response code="200">Returns the updated Exam.</response>
+            <response code="400">Bad request.</response>  
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExamController.DeleteAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Delete an Exam
+            </summary>
+            <param name="id">The id of the Exam to delete.</param>
+            <param name="token"></param>
+            <returns></returns>
+            <response code="204">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="T:Exercises.Controllers.ExerciseCollectionController">
+            <summary>
+            An Exercise Collection consists of a set of set of Exercises. This is used to make draft Exams by the teacher
+            that will be later published.
+            </summary>
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.GetAsync(Exercises.Common.ExerciseCollection.ExerciseCollectionFilter,System.Threading.CancellationToken)">
+            <summary>
+            Get a collection of Exercise Collections.
+            </summary>
+            <remarks>
+            </remarks>
+            <param name="filter">Query parameters to send to filter the returned results.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="400">Bad request.</response>
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.GetAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get a single Exercise Collection.
+            </summary>
+            <param name="id">The id of the Exercise Collection to return.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.CreateAsync(Newtonsoft.Json.Linq.JObject,System.Threading.CancellationToken)">
+            <summary>
+            Create an Exercise Collection.
+            </summary>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="201">Returns the newly created Exercise Collection.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.CreateAsync(System.Guid,Exercises.Common.ExerciseCollection.ExerciseCollectionExercisesOperationDto,System.Threading.CancellationToken)">
+            <summary>
+            Add/Remove Exercise from Exercise Collection
+            </summary>
+            <param name="id">The id of the Exercise Collection to perform this operation.</param>
+            <param name="exercisesOperation"></param>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.UpdateAsync(System.Guid,Newtonsoft.Json.Linq.JArray,System.Threading.CancellationToken)">
+            <summary>
+            Update an Exercise Collection.
+            </summary>
+            <param name="id">The id of the Exercise Collection to update.</param>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="200">Returns the updated Exercise Collection.</response>
+            <response code="400">Bad request.</response>  
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseCollectionController.DeleteAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Delete an Exercise Collection.
+            </summary>
+            <param name="id">The id of the Exercise Collection to delete.</param>
+            <param name="token"></param>
+            <returns></returns>
+            <response code="204">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="T:Exercises.Controllers.ExerciseController">
+            <summary>
+            An exercise is a part of an exercise collection. Each exercise contributes independently
+            to the evaluation score of a students submission in an exam. An exercise can be identified by its type
+            and for every Problem Type there is a specific exercise type.
+            </summary>
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseController.GetAsync(Exercises.Common.Exercise.ExerciseFilter,System.Threading.CancellationToken)">
+            <summary>
+            Get a collection of Exercises.
+            </summary>
+            <param name="filter">Query parameters to send to filter the returned results.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="400">Bad request.</response>
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseController.GetAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get a single Exercise.
+            </summary>
+            <param name="id"></param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseController.CreateAsync(Newtonsoft.Json.Linq.JObject,System.Threading.CancellationToken)">
+            <summary>
+            Create an Exercise
+            </summary>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="201">Returns the newly created Exercise.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseController.UpdateAsync(System.Guid,Newtonsoft.Json.Linq.JArray,System.Threading.CancellationToken)">
+            <summary>
+            Update an Exercise.
+            </summary>
+            <param name="id"></param>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="200">Returns the updated Exercise.</response>
+            <response code="400">Bad request.</response>  
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.ExerciseController.DeleteAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Delete an Exercise
+            </summary>
+            <param name="id">The id of the Exercise to delete.</param>
+            <param name="token"></param>
+            <response code="204">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.IdentityController.Register(Exercises.Common.Authorization.Requests.UserRegistrationRequest)">
+            <summary>
+            Register
+            </summary>
+            <param name="request"></param>
+        </member>
+        <member name="M:Exercises.Controllers.IdentityController.Login(Exercises.Common.Authorization.Requests.UserLoginRequest)">
+            <summary>
+            Login
+            </summary>
+            <param name="request"></param>
+        </member>
+        <member name="M:Exercises.Controllers.IdentityController.Refresh(Exercises.Common.Authorization.Requests.RefreshTokenRequest)">
+            <summary>
+            Refresh Token
+            </summary>
+            <param name="request"></param>
+        </member>
+        <member name="M:Exercises.Controllers.SubmissionController.GetAsync(Exercises.Common.Submission.SubmissionFilter,System.Threading.CancellationToken)">
+            <summary>
+            Get a collection of Submissions.
+            </summary>
+            <param name="filter">Query parameters to send to filter the returned results.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="400">Bad request.</response>
+        </member>
+        <member name="M:Exercises.Controllers.SubmissionController.GetAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Get a single Submission.
+            </summary>
+            <param name="id">The id of the Submission to return.</param>
+            <param name="token"></param>
+            <response code="200">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.SubmissionController.CreateAsync(Newtonsoft.Json.Linq.JObject,System.Threading.CancellationToken)">
+            <summary>
+            Create a Submission.
+            </summary>
+            <param name="payload"></param>
+            <param name="token"></param>
+            <response code="201">Returns the newly created Submission.</response>
+            <response code="400">Bad request.</response>  
+        </member>
+        <member name="M:Exercises.Controllers.SubmissionController.DeleteAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Delete a Submission.
+            </summary>
+            <param name="id">The id of the Submission to delete.</param>
+            <param name="token"></param>
+            <returns></returns>
+            <response code="204">Successful response.</response>
+            <response code="404">Not found.</response>  
+        </member>
+        <member name="P:Exercises.Swagger.JsonPatchDocumentSchema.Operations">
+            <summary>
+            An array of operations to apply to the specified resource. For more information visit http://jsonpatch.com/.
+            </summary>
+        </member>
+        <member name="T:Exercises.Swagger.OpenApiRawString">
+            <summary>
+            Represents a raw value that should not be encoded
+            </summary>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Exercises.Swagger.OpenApiRawString"/> class.
+            </summary>
+            <param name="value">Raw value</param>
+        </member>
+        <member name="P:Exercises.Swagger.OpenApiRawString.AnyType">
+            <inheritdoc/>
+        </member>
+        <member name="P:Exercises.Swagger.OpenApiRawString.PrimitiveType">
+            <inheritdoc/>
+        </member>
+        <member name="P:Exercises.Swagger.OpenApiRawString.Value">
+            <summary>
+            Raw value to be output
+            </summary>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.op_Implicit(Microsoft.OpenApi.Any.OpenApiString)~Exercises.Swagger.OpenApiRawString">
+            <summary>
+            Converts between an <see cref="T:Microsoft.OpenApi.Any.OpenApiString"/> and a
+            <see cref="T:Exercises.Swagger.OpenApiRawString"/>
+            </summary>
+            <param name="value"><see cref="T:Microsoft.OpenApi.Any.OpenApiString"/> to convert</param>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.op_Implicit(Exercises.Swagger.OpenApiRawString)~Microsoft.OpenApi.Any.OpenApiString">
+            <summary>
+            Converts between an <see cref="T:Exercises.Swagger.OpenApiRawString"/> and a
+            <see cref="T:Microsoft.OpenApi.Any.OpenApiString"/>
+            </summary>
+            <param name="value"><see cref="T:Exercises.Swagger.OpenApiRawString"/> to convert</param>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.ToOpenApiRawString(Microsoft.OpenApi.Any.OpenApiString)">
+            <summary>
+            Converts between an <see cref="T:Microsoft.OpenApi.Any.OpenApiString"/> and a
+            <see cref="T:Exercises.Swagger.OpenApiRawString"/>
+            </summary>
+            <param name="value"><see cref="T:Microsoft.OpenApi.Any.OpenApiString"/> to convert</param>
+            <returns>New <see cref="T:Exercises.Swagger.OpenApiRawString"/></returns>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.ToOpenApiString(Exercises.Swagger.OpenApiRawString)">
+            <summary>
+            Converts between an <see cref="T:Exercises.Swagger.OpenApiRawString"/> and a
+            <see cref="T:Microsoft.OpenApi.Any.OpenApiString"/>
+            </summary>
+            <param name="value"><see cref="T:Exercises.Swagger.OpenApiRawString"/> to convert</param>
+            <returns>New <see cref="T:Microsoft.OpenApi.Any.OpenApiString"/></returns>
+        </member>
+        <member name="M:Exercises.Swagger.OpenApiRawString.Write(Microsoft.OpenApi.Writers.IOpenApiWriter,Microsoft.OpenApi.OpenApiSpecVersion)">
+            <inheritdoc/>
+        </member>
+    </members>
+</doc>
