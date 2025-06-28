@@ -1,0 +1,135 @@
+﻿@page "/create-exercise"
+@using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
+@using Diagrammatic_test.Components.Shared.Dto
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inherits LayoutComponentBase
+@attribute [StreamRendering]
+
+<h3>Create Exercise</h3>
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_exerciseCollections == null)
+            {
+                <p>Loading exercise collections...</p>
+            }
+            else
+            {
+                <EditForm Model="_requestModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label for="exerciseCollection">Exercise Collection</label>
+                        <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
+                            <option selected disabled>---Select Collection---</option>
+                            @foreach (var collection in _exerciseCollections)
+                            {
+                                <option value="@collection.Id">@collection.Name</option>
+                            }
+                        </select>
+                        <_errorMessage For="@(() => _exerciseCreateDto.ExerciseCollectionId)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exerciseId">Exercise ID</label>
+                        <InputText id="exerciseId" class="form-control" @bind-Value="_requestModel.ExerciseId" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Exercise</button>
+                </EditForm>
+                }
+        </Authorized>
+        <NotAuthorized>
+            <p>You are not authorized to view this page.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@if (_errorMessage != null)
+{
+    toastService.ShowError(_errorMessage);
+}
+
+@code {
+    private List<ExerciseCollectionDto> _exerciseCollections;
+    private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
+    private string _errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                toastService.ShowError("You are not authorized to view this page.");
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            await LoadExerciseCollections();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadExerciseCollections()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/api/exerciseCollection");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercise collections.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("DiagrammaticClient");
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var url = $"/api/exerciseCollection/{_collectionId}/exercises";
+            var response = await client.PostAsJsonAsync(url, _requestModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                toastService.ShowSuccess("Exercise successfully added to the collection!");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                toastService.ShowError($"Failed: {response.StatusCode}\n{errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError($"Exception: {ex.Message}");
+        }
+    }
+}

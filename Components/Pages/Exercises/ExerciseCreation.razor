@@ -1,0 +1,171 @@
+﻿@page "/create-exercise"
+@using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
+@using Diagrammatic_test.Components.Shared.Dto
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inherits LayoutComponentBase
+@attribute [StreamRendering]
+
+<h3>Create Exercise</h3>
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_exerciseCollections == null)
+            {
+                <p>Loading exercise collections...</p>
+            }
+            else
+            {
+                <EditForm Model="_exerciseCreateDto" OnValidSubmit="HandleValidSubmit" FormName="exerciseCreationForm">
+                    <ChildContent Context="editFormContext">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input id="name" class="form-control" @bind="_exerciseCreateDto.Name" />
+                            <_errorMessage For="@(() => _exerciseCreateDto.Name)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" class="form-control" @bind="_exerciseCreateDto.Category" namespace ="---Select---"> 
+                                <option value="diagram">Diagram</option>
+                                <option value="path">Path</option>
+                            </select>
+                            <_errorMessage For="@(() => _exerciseCreateDto.ProblemType)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="weight">Weight</label>
+                            <input type="number" id="weight" class="form-control" @bind="_exerciseCreateDto.Weight" />
+                            <_errorMessage For="@(() => _exerciseCreateDto.Weight)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeToComplete">Time to Complete (seconds)</label>
+                            <input type="number" id="timeToComplete" class="form-control" @bind="_exerciseCreateDto.TimeToComplete" />
+                            <_errorMessage For="@(() => _exerciseCreateDto.TimeToComplete)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="exerciseCollection">Exercise Collection</label>
+                            <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
+                                <option selected disabled>---Select Collection---</option>
+                                @foreach (var collection in _exerciseCollections)
+                                {
+                                    <option value="@collection.Id">@collection.Name</option>
+                                }
+                            </select>
+                            <_errorMessage For="@(() => _exerciseCreateDto.ExerciseCollectionId)" />
+                        </div>
+
+                        <br />
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </ChildContent>
+                </EditForm>
+
+                <br />
+
+                <br />
+                <a class="nav-link active" href="delete-exercise">
+                    Do you want to delete an Exercise? Click here.
+                </a>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <p>You are not authorized to view this page.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@if (_errorMessage != null)
+{
+    toastService.ShowError(_errorMessage);
+}
+
+@code {
+    private List<ExerciseCollectionDto> _exerciseCollections;
+    private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
+    private string _errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                toastService.ShowError("You are not authorized to view this page.");
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            await LoadExerciseCollections();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadExerciseCollections()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/api/exerciseCollection");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercise collections.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        _exerciseCreateDto.published = false;
+
+        _exerciseCreateDto.ProblemType = _exerciseCreateDto.Category == "diagram" ? "0" : "1";
+
+        try
+        {
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var request = await httpClient.PostAsJsonAsync("/api/exercise", _exerciseCreateDto);
+
+            if (request.IsSuccessStatusCode)
+            {
+                toastService.ShowSuccess("Exercise created successfully!");
+                _errorMessage = null;
+            }
+            else
+            {
+                var errorContent = await request.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error creating exercise: {request.StatusCode}, {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+}

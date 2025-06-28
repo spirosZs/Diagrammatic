@@ -1,0 +1,151 @@
+﻿@page "/create-exam"
+@using Diagrammatic_test.Components.Pages.Exam.Dto
+@using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inherits LayoutComponentBase
+@attribute [StreamRendering]
+
+<h3>Exam Creation</h3>
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <EditForm Model="_examDto" OnValidSubmit="HandleValidSubmit" FormName="examCreationForm">
+                <ChildContent Context="editFormContext">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="exerciseCollectionId">Select Exercise Collection</label>
+                    <select id="exerciseCollectionId" class="form-control" @onchange="OnExerciseCollectionSelected" >
+                        <option value="">-- Select --</option>
+                        @foreach (var collection in _exerciseCollections)
+                        {
+                                <option>@collection.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Exercise Collection ID</label>
+                        <input id="name" class="form-control" @bind="@_examDto.ExerciseCollectionId" disabled />
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                        <input id="category" class="form-control" @bind="@_examDto.Category" disabled />
+                </div>
+
+                <br />
+                <button type="submit" class="btn btn-primary">Submit</button>
+                </ChildContent>
+            </EditForm>
+        </Authorized>
+        <NotAuthorized> 
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+
+@code {
+    private ExamCreateDto _examDto;
+    private List<ExerciseCollectionDto> _exerciseCollections;
+    private string _errorMessage= "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _examDto = new ExamCreateDto();
+        _exerciseCollections = new List<ExerciseCollectionDto>();
+
+        await LoadExerciseCollections();
+
+        var authState = await ((AuthStateProviderService)AuthenticationStateProvider).GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            toastService.ShowError("You are not authorized to view this page.");
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private async Task LoadExerciseCollections()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/api/exerciseCollection");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercise collections.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void OnExerciseCollectionSelected(ChangeEventArgs e)
+    {
+        var selectedName = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(selectedName))
+        {
+            var selectedCollection = _exerciseCollections.FirstOrDefault(c => c.Name == selectedName);
+            if (selectedCollection != null)
+            {
+                _examDto.ExerciseCollectionId = selectedCollection.Id;
+                _examDto.Name = selectedCollection.Name;
+                _examDto.Category = selectedCollection.Category;
+            }
+            else
+            {
+                toastService.ShowError("Selected exercise collection not found.");
+            }
+        }
+        else
+        {
+            _examDto.ExerciseCollectionId = Guid.Empty;
+            _examDto.Name = string.Empty;
+            _examDto.Category = string.Empty;
+        }
+    }
+
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.PostAsJsonAsync("/api/exam", _examDto);
+            if (response.IsSuccessStatusCode)
+            {
+                toastService.ShowSuccess("Exam created successfully!");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error creating exam: {response.StatusCode}, {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="wwwroot\bootstrap\**" />
+    <Content Remove="wwwroot\bootstrap\**" />
+    <EmbeddedResource Remove="wwwroot\bootstrap\**" />
+    <None Remove="wwwroot\bootstrap\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazor.Bootstrap" Version="3.0.0" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+    <PackageReference Include="Blazored.Toast" Version="4.2.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.8" />
+    <PackageReference Include="Remote.Linq.Newtonsoft.Json" Version="7.2.1" />
+    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="26.2.14" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="26.2.14" />
+  </ItemGroup>
+
+</Project>

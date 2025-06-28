@@ -1,0 +1,88 @@
+﻿@page "/delete-exercise"
+@using Diagrammatic_test.Components.Shared.Dto
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json.Linq
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inherits LayoutComponentBase
+@attribute [StreamRendering]
+
+<h3>Delete Exercise</h3>
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <EditForm Model="_exerciseDeletion" OnValidSubmit="HandleValidSubmit" FormName="exerciseCollectionCreationForm">
+                <ChildContent Context="editFormContext">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="form-group">
+                        <label for="id">Exercise Id</label>
+                        <input id="id" class="form-control" @bind="@_exerciseDeletion.Id" />
+                        <_errorMessage For="@(() => _exerciseDeletion.Id)" />
+                    </div>
+                   
+                    <br />
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+
+
+                </ChildContent>
+            </EditForm>
+        </Authorized>
+        <NotAuthorized>
+
+
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+   
+
+
+                
+
+@code {
+    public ExerciseDeletion _exerciseDeletion = new ExerciseDeletion();
+     
+    //delete exercise
+    private async Task HandleValidSubmit()
+    {
+        //gets user token to authenticate
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+
+        try
+        {
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // API endpoint URL
+            var requestUrl = $"/api/exercise/{(_exerciseDeletion.Id)}";
+
+            var request = await httpClient.DeleteAsync(requestUrl); ;
+            if (request.IsSuccessStatusCode)
+            {
+
+                //show success notification
+                toastService.ShowSuccess("Exercise Deleted Succesfully!!");
+            }
+            else
+            {
+                // Handle failure
+                var errorContent = await request.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error deleting exercise: {request.StatusCode}, {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            string _errorMessage;
+            // Handle exception
+            _errorMessage = ex.Message;
+        }
+    }
+
+}
