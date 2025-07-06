@@ -1,0 +1,46 @@
+## Build artifacts
+bin/
+obj/
+out/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider
+.idea/
+
+## Visual Studio Code
+.vscode/
+
+## Logs
+*.log
+
+## Secrets or local configs
+appsettings.*.json
+!appsettings.json  # Keep the base config file tracked
+.env
+
+## ASP.NET temporary files
+**/GeneratedCode/
+**/PublishProfiles/
+**/TestResults/
+
+## NuGet packages
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+
+## Dependency cache
+.vs/
+_ReSharper*/
+*.DotSettings.user
+
+## Other
+*.db
+*.sqlite
+*.bak
