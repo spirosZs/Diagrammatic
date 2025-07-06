@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "BRrqY53zmU8dPeIsroDMUd3NMbBhSZpJ7UUj8zgGRicwOZjocvz/VT/NIApn9XhY7o0mcolX6KcbL+N5SAeDFQ==",
+  "dgSpecHash": "VaB7TWkE3Tg=",
   "success": true,
-  "projectFilePath": "C:\\Users\\spiro\\source\\repos\\Diagrammatic_test\\Diagrammatic_test.csproj",
+  "projectFilePath": "C:\\Users\\spiro\\Documents\\spiros\\ceid\\Thesis\\Diagrammatic_Repo\\Diagrammatic\\Diagrammatic_test.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\spiro\\.nuget\\packages\\aqua-core\\5.4.1\\aqua-core.5.4.1.nupkg.sha512",
     "C:\\Users\\spiro\\.nuget\\packages\\aqua-core-newtonsoft-json\\5.4.1\\aqua-core-newtonsoft-json.5.4.1.nupkg.sha512",

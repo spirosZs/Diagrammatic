@@ -1,4 +1,4 @@
-﻿@page "/create-exercise"
+﻿@page "/add-exercise-to-collection"
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
 @using Diagrammatic_test.Components.Shared.Dto
 @using Microsoft.AspNetCore.Components.Authorization
@@ -11,11 +11,11 @@
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
 
-<h3>Create Exercise</h3>
+<h3>Add Exercise Collection</h3>
 
 <CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
+    <AuthorizeView Context="auth">
+        <Authorized >
             @if (_exerciseCollections == null)
             {
                 <p>Loading exercise collections...</p>
@@ -28,19 +28,25 @@
 
                     <div class="form-group">
                         <label for="exerciseCollection">Exercise Collection</label>
-                        <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
+                        <select id="exerciseCollection" class="form-control" @bind="_requestModel.ExerciseCollectionId">
                             <option selected disabled>---Select Collection---</option>
                             @foreach (var collection in _exerciseCollections)
                             {
                                 <option value="@collection.Id">@collection.Name</option>
                             }
                         </select>
-                        <_errorMessage For="@(() => _exerciseCreateDto.ExerciseCollectionId)" />
+                        <_errorMessage For="@(() => _requestModel.ExerciseCollectionId)" />
                     </div>
 
                     <div class="form-group">
-                        <label for="exerciseId">Exercise ID</label>
-                        <InputText id="exerciseId" class="form-control" @bind-Value="_requestModel.ExerciseId" />
+                        <label for="exercise">Exercise</label>
+                        <select id="exercise" class="form-control" @bind="_requestModel.Name">
+                            <option selected disabled>---Select Exercise---</option>
+                            @foreach (var exercise in _exercises)
+                            {
+                                <option value="@exercise.Name">@exercise.Name</option>
+                            }
+                        </select>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Add Exercise</button>
@@ -60,8 +66,10 @@
 
 @code {
     private List<ExerciseCollectionDto> _exerciseCollections;
+    private List<ExerciseDto> _exercises;
     private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
     private string _errorMessage;
+    private ExerciseCreateDto _requestModel = new ExerciseCreateDto();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -76,8 +84,9 @@
             }
 
             await LoadExerciseCollections();
+            await LoadExercises(); // <-- load exercises here
             StateHasChanged();
-        }
+        } 
     }
 
     private async Task LoadExerciseCollections()
@@ -105,6 +114,32 @@
         }
     }
 
+    private async Task LoadExercises()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/api/exercise"); // Adjust endpoint if needed
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _exercises = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercises.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+
     private async Task HandleValidSubmit()
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
@@ -114,7 +149,7 @@
             var client = HttpClientFactory.CreateClient("DiagrammaticClient");
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var url = $"/api/exerciseCollection/{_collectionId}/exercises";
+            var url = $"/api/exerciseCollection/{_requestModel.ExerciseCollectionId}/exercises";
             var response = await client.PostAsJsonAsync(url, _requestModel);
 
             if (response.IsSuccessStatusCode)
