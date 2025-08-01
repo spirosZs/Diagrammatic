@@ -2,7 +2,7 @@
 
 namespace Diagrammatic_test.Components.Shared.Dto
 {
-    public class ExerciseDto 
+    public class ExerciseDto : EntityDtoBase
     {
         public string ProblemType { get; set; }
         public int Weight { get; set; }

@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\Diagrammatic_test.props" />
-</Project>

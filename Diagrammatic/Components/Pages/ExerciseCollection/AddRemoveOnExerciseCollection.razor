@@ -28,24 +28,35 @@
 
                     <div class="form-group">
                         <label for="exerciseCollection">Exercise Collection</label>
-                        <select id="exerciseCollection" class="form-control" @bind="_requestModel.ExerciseCollectionId">
+                        <select id="exerciseCollection" class="form-control" @bind="exerciseCollectionSelected.Id">
                             <option selected disabled>---Select Collection---</option>
                             @foreach (var collection in _exerciseCollections)
                             {
                                 <option value="@collection.Id">@collection.Name</option>
                             }
                         </select>
-                        <_errorMessage For="@(() => _requestModel.ExerciseCollectionId)" />
                     </div>
 
                     <div class="form-group">
                         <label for="exercise">Exercise</label>
-                        <select id="exercise" class="form-control" @bind="_requestModel.Name">
+                        <select id="exercise" class="form-control" @bind="_requestModel.ExerciseId">
                             <option selected disabled>---Select Exercise---</option>
                             @foreach (var exercise in _exercises)
                             {
-                                <option value="@exercise.Name">@exercise.Name</option>
+                                <option value="@exercise.Id">@exercise.Name</option>
                             }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exercise">Operation</label>
+                        <select id="exercise" class="form-control" @bind="_requestModel.Operation">
+                            <option selected disabled>---Select Exercise---</option>
+                            @foreach (var op in Enum.GetValues<ExerciseCollectionOperation>())
+                            {
+                                <option value="@op">@op</option>
+                            }
+              
                         </select>
                     </div>
 
@@ -69,7 +80,8 @@
     private List<ExerciseDto> _exercises;
     private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
     private string _errorMessage;
-    private ExerciseCreateDto _requestModel = new ExerciseCreateDto();
+    private AddRemoveOnExerciseCollectionDto _requestModel = new AddRemoveOnExerciseCollectionDto();
+    private ExerciseCollectionDto exerciseCollectionSelected = new ExerciseCollectionDto();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -149,8 +161,8 @@
             var client = HttpClientFactory.CreateClient("DiagrammaticClient");
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var url = $"/api/exerciseCollection/{_requestModel.ExerciseCollectionId}/exercises";
-            var response = await client.PostAsJsonAsync(url, _requestModel);
+            var url = $"/api/exerciseCollection/{exerciseCollectionSelected.Id}/exercises";
+            var response = await client.PatchAsJsonAsync(url, _requestModel);
 
             if (response.IsSuccessStatusCode)
             {
