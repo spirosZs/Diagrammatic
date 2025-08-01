@@ -1,7 +1,7 @@
 ## Build artifacts
-bin/
-obj/
-out/
+Diagrammatic/bin/
+Diagrammatic/obj/
+Diagrammatic/out/
 
 ## User-specific files
 *.user
