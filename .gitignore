@@ -13,7 +13,7 @@ Diagrammatic/out/
 .idea/
 
 ## Visual Studio Code
-.vscode/
+.vs/
 
 ## Logs
 *.log
