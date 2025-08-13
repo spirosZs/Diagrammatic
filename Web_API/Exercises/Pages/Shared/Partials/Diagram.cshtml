@@ -1,3 +1,63 @@
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/material.css" />
+}
+
+@section Scripts {
+    <script src="https://cdn.syncfusion.com/ej2/dist/ej2.min.js"></script>
+    <script src="https://cdn.syncfusion.com/ej2/30.1.37/dist/ej2-diagrams.min.js"></script>
+
+    <script>
+        function diagramCreated() {
+            console.log("diagramCreated: fired");
+            var diagram = document.getElementById('diagram').ej2_instances[0];
+            console.log("diagram instance found:", !!diagram);
+
+            diagram.snapSettings = {
+                constraints: ej.diagrams.SnapConstraints.All,
+                snapAngle: 5,
+                horizontalGridlines: { lineColor: '#e0e0e0', lineIntervals: [10] },
+                verticalGridlines: { lineColor: '#e0e0e0', lineIntervals: [10] }
+            };
+
+            diagram.connectorDefaults = function (connector) {
+                connector.sourceDecorator = { shape: 'None' };
+                connector.targetDecorator = { shape: 'Arrow' };
+                connector.style = { strokeWidth: 2 };
+                return connector;
+            };
+
+            diagram.collectionChange = function (args) {
+                if (args.state === 'Changed' && args.type === 'Addition' && args.element instanceof ej.diagrams.Connector) {
+                    console.log("Connector added:", args.element);
+                    diagram.tool = ej.diagrams.DiagramTools.Default;
+                    diagram.drawingObject = undefined;
+                }
+            };
+
+            function startDrawingConnector(segmentType) {
+                diagram.drawingObject = {
+                    type: 'Connector',
+                    segments: [{ type: segmentType }]
+                };
+                diagram.tool = ej.diagrams.DiagramTools.ContinuousDraw;
+            }
+
+            document.getElementById('straight').addEventListener('click', function () {
+                console.log("Straight connector tool activated");
+                startDrawingConnector('Straight');
+            });
+
+            document.getElementById('cubic').addEventListener('click', function () {
+                console.log("Bezier connector tool activated");
+                startDrawingConnector('Bezier');
+            });
+        }
+
+
+    </script>
+}
+
+
 <div class="row">
     <div class="col-lg-3 col-sm-3 control-section step1_2" id="palette-space" style="height:100%;">
         <div class="row">
@@ -5,7 +65,7 @@
             </ejs-symbolpalette>
         </div>
         <div class="row" style="padding-top: 10px;font-family: 'Saira', sans-serif !important;">
-            <ejs-checkbox id="checked" checked="true" label="Continuous Draw" change="onChangeData"></ejs-checkbox>
+            <!-- <ejs-checkbox id="checked" checked="true" label="Continuous Draw" change="onChangeData"></ejs-checkbox> -->
         </div>
         <div class="row" style="padding-top: 10px">
             <ejs-uploader id="fileupload" success="onUploadSuccess">
