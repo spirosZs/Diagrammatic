@@ -2,7 +2,6 @@
 Diagrammatic/bin/
 Diagrammatic/obj/
 Diagrammatic/out/
-!Diagrammatic/Web_API/Exercises/wwwroot/images/*.png
 
 ## User-specific files
 *.user

@@ -337,3 +337,4 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 *.png
+!Diagrammatic/Web_API/Exercises/wwwroot/images/*.png
