@@ -2,9 +2,9 @@
 Diagrammatic/bin/
 Diagrammatic/obj/
 Diagrammatic/out/
-!Diagrammatic/out/wwwroot/
-!Diagrammatic/out/wwwroot/images/
-!Diagrammatic/out/wwwroot/images/**
+!Diagrammatic/Web_API/out/wwwroot/
+!Diagrammatic/Web_API/out/wwwroot/images/
+!Diagrammatic/Web_API/out/wwwroot/images/**
 
 ## User-specific files
 *.user
