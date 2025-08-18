@@ -45,3 +45,5 @@ _ReSharper*/
 *.db
 *.sqlite
 *.bak
+Diagrammatic/.vs/Diagrammatic_test/v17/.suo
+*.v2
