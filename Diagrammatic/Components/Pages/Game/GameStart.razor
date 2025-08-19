@@ -1,0 +1,168 @@
+﻿@page "/start-game"
+@using Diagrammatic_test.Components.Pages.Exam.Dto
+@using Diagrammatic_test.Components.Pages.Game.Dto
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inherits LayoutComponentBase
+@attribute [StreamRendering]
+
+<h3>Start Game</h3>
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <EditForm Model="_gameInfo" OnValidSubmit="HandleValidSubmit" FormName="startGameForm">
+                <ChildContent Context="editFormContext">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label for="examId">Game ID</label>
+                        <select id="examId" class="form-control" @onchange="OnExamSelected">
+                            <option value="">-- Select --</option>
+                            @foreach (var collection in _examCollection)
+                            {
+                                <option>@collection.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <br />
+                    <button type="submit" class="btn btn-primary">Start Game</button>
+                </ChildContent>
+            </EditForm>
+
+            <br />
+
+            @if (_gameInfo != null)
+            {
+                <div class="card mt-3 p-3">
+                    <h5>Game Info</h5>
+                    <ul>
+                        <li><strong>Category:</strong> @_gameInfo.Category</li>
+                        <li><strong>Has Started:</strong> @_gameInfo.HasStarted</li>
+                        <li><strong>Has Ended:</strong> @_gameInfo.HasEnded</li>
+                        <li><strong>Date Started:</strong> @_gameInfo.DateStarted</li>
+                        <li><strong>Date Ended:</strong> @_gameInfo.DateEnded</li>
+                        <li><strong>Participants:</strong> @_gameInfo.Participants</li>
+                        <li><strong>Total Exercises:</strong> @_gameInfo.TotalExercises</li>
+                        <li><strong>Date Time To End:</strong> @_gameInfo.DateTimeToEnd</li>
+                        <li><strong>Date Time To Next Exercise:</strong> @_gameInfo.DateTimeToNextExercise</li>
+                    </ul>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger mt-3">@_errorMessage</div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <p>You are not authorized to start a game.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private Guid _selectedExamId;
+    private GameInfoDto? _gameInfo;
+    private List<ExamDto> _examCollection;
+    private string _errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _examCollection = new List<ExamDto>();
+        await loadExamCollection();
+
+        var authState = await ((AuthStateProviderService)AuthenticationStateProvider).GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            toastService.ShowError("You are not authorized to view this page.");
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private async Task loadExamCollection()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/api/exam");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _examCollection = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExamDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercise collections.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void OnExamSelected(ChangeEventArgs e)
+    {
+        var selectedName = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(selectedName))
+        {
+            var selectedExam = _examCollection.FirstOrDefault(c => c.Name == selectedName);
+            if (selectedExam != null)
+            {
+                _selectedExamId= selectedExam.Id;
+            }
+            else
+            {
+                toastService.ShowError("Selected exam not found.");
+            }
+        }
+        else
+        {
+            _selectedExamId = Guid.Empty;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            _errorMessage = "";
+
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.PostAsync($"/api/games/{_selectedExamId}/start", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _gameInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<GameInfoDto>(json);
+                toastService.ShowSuccess("Game started successfully!");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error starting game: {response.StatusCode}, {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            toastService.ShowError("Failed to start the game.");
+        }
+    }
+}
