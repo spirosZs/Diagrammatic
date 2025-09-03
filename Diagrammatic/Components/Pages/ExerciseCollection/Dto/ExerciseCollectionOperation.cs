@@ -3,7 +3,8 @@
         public enum ExerciseCollectionOperation
     {
         AddExercise,
-        RemoveExercise
+        RemoveExercise,
+        SetParticipationCode
     }
 
 }

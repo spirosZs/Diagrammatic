@@ -16,11 +16,7 @@
 <CascadingAuthenticationState>
     <AuthorizeView>
         <Authorized>
-            <EditForm Model="_gameInfo" OnValidSubmit="HandleValidSubmit" FormName="startGameForm">
-                <ChildContent Context="editFormContext">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
+            <form @onsubmit="HandleValidSubmit">
                     <div class="form-group">
                         <label for="examId">Game ID</label>
                         <select id="examId" class="form-control" @onchange="OnExamSelected">
@@ -34,8 +30,7 @@
 
                     <br />
                     <button type="submit" class="btn btn-primary">Start Game</button>
-                </ChildContent>
-            </EditForm>
+            </form>
 
             <br />
 
@@ -103,7 +98,7 @@
             }
             else
             {
-                _errorMessage = "Failed to load exercise collections.";
+                _errorMessage = "Failed to start Game.";
             }
         }
         catch (Exception ex)
@@ -145,7 +140,7 @@
             httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await httpClient.PostAsync($"/api/games/{_selectedExamId}/start", null);
+            var response = await httpClient.PostAsync($"/api/game/{_selectedExamId}/start", null);
 
             if (response.IsSuccessStatusCode)
             {

@@ -27,31 +27,57 @@
                     <ValidationSummary />
 
                     <div class="form-group">
-                        <label for="exerciseCollection">Exercise Collection</label>
-                        <select id="exerciseCollection" class="form-control" @bind="exerciseCollectionSelected.Id">
-                            <option selected disabled>---Select Collection---</option>
-                            @foreach (var collection in _exerciseCollections)
-                            {
-                                <option value="@collection.Id">@collection.Name</option>
-                            }
-                        </select>
-                    </div>
+                        @switch (_requestModel.Operation)
+                        {
 
-                    <div class="form-group">
-                        <label for="exercise">Exercise</label>
-                        <select id="exercise" class="form-control" @bind="_requestModel.ExerciseId">
-                            <option selected disabled>---Select Exercise---</option>
-                            @foreach (var exercise in _exercises)
-                            {
-                                <option value="@exercise.Id">@exercise.Name</option>
-                            }
-                        </select>
-                    </div>
+                            case ExerciseCollectionOperation.SetParticipationCode:
+                                <div class="form-group">
+                                    <label for="Exam">Exam ID</label>
+                                    <select id="Exam" class="form-control" @bind="exerciseCollectionSelected.Id">
+                                        <option selected disabled>---Select Exam---</option>
+                                        @foreach (var collection in _exerciseCollections)
+                                        {
+                                            <option value="@collection.Id">@collection.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="participationCode">Participation Code</label>
+                                    <input id="participationCode" class="form-control"
+                                           @bind="_requestModel.ParticipationCode" />
+                                </div>
+                                break;
 
-                    <div class="form-group">
+                            case ExerciseCollectionOperation.AddExercise:
+                            case ExerciseCollectionOperation.RemoveExercise:
+                                <div class="form-group">
+                                    <label for="exerciseCollection">Exercise Collection</label>
+                                    <select id="exerciseCollection" class="form-control" @bind="exerciseCollectionSelected.Id">
+                                        <option selected disabled>---Select Collection---</option>
+                                        @foreach (var collection in _exerciseCollections)
+                                        {
+                                            <option value="@collection.Id">@collection.Name</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="exercise">Exercise</label>
+                                    <select id="exercise" class="form-control" @bind="_requestModel.ExerciseId">
+                                        <option selected disabled>---Select Exercise---</option>
+                                        @foreach (var exercise in _exercises)
+                                        {
+                                            <option value="@exercise.Id">@exercise.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                break;
+                        }
+
                         <label for="exercise">Operation</label>
-                        <select id="exercise" class="form-control" @bind="_requestModel.Operation">
-                            <option selected disabled>---Select Exercise---</option>
+                        <select id="exercise" class="form-control" @onchange="OnOperationChanged">
+                            <option selected disabled>---Select Operation---</option>
+                           
                             @foreach (var op in Enum.GetValues<ExerciseCollectionOperation>())
                             {
                                 <option value="@op">@op</option>
@@ -59,7 +85,7 @@
               
                         </select>
                     </div>
-
+                    <br />
                     <button type="submit" class="btn btn-primary">Add Exercise</button>
                 </EditForm>
                 }
@@ -82,6 +108,7 @@
     private string _errorMessage;
     private AddRemoveOnExerciseCollectionDto _requestModel = new AddRemoveOnExerciseCollectionDto();
     private ExerciseCollectionDto exerciseCollectionSelected = new ExerciseCollectionDto();
+    public string ParticipationCode;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -155,18 +182,39 @@
     private async Task HandleValidSubmit()
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
+        string url;
+        HttpResponseMessage response ;
+        string responseMessage;
 
         try
         {
             var client = HttpClientFactory.CreateClient("DiagrammaticClient");
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var url = $"/api/exerciseCollection/{exerciseCollectionSelected.Id}/exercises";
-            var response = await client.PatchAsJsonAsync(url, _requestModel);
+            if (_requestModel.Operation.Equals(ExerciseCollectionOperation.SetParticipationCode))
+            {
+                url = $"/api/game/{exerciseCollectionSelected.Id}/update";
+                // JSON Patch payload
+                var payload = new { participationCode = _requestModel.ParticipationCode };
+                response = await client.PostAsJsonAsync(url, payload);
+                var text = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Response: {response.StatusCode}, Body: {text}");
+                responseMessage = "Participation Code was set Successfully!";
+            }
+
+            else
+            {
+                url = $"/api/exerciseCollection/{exerciseCollectionSelected.Id}/exercises";
+                response = await client.PatchAsJsonAsync(url, _requestModel);
+                if (_requestModel.Operation.Equals(ExerciseCollectionOperation.AddExercise))
+                    responseMessage = "Exercise successfully added to the collection!";
+                else
+                    responseMessage = "Exercise successfully deleted to the collection!";
+            }
 
             if (response.IsSuccessStatusCode)
             {
-                toastService.ShowSuccess("Exercise successfully added to the collection!");
+                toastService.ShowSuccess(responseMessage);
             }
             else
             {
@@ -178,5 +226,45 @@
         {
             toastService.ShowError($"Exception: {ex.Message}");
         }
+    }
+
+    private async Task OnOperationChanged(ChangeEventArgs e)
+    {
+        _requestModel.Operation = Enum.Parse<ExerciseCollectionOperation>(e.Value.ToString());
+
+        try
+        {
+            var selectedOp = Enum.Parse<ExerciseCollectionOperation>(e.Value.ToString());
+            _requestModel.Operation = selectedOp;
+
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            HttpResponseMessage response;
+            if (selectedOp == ExerciseCollectionOperation.AddExercise ||
+             selectedOp == ExerciseCollectionOperation.RemoveExercise)
+                 response = await httpClient.GetAsync("/api/exerciseCollection");
+            else
+                 response = await httpClient.GetAsync("/api/exam");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+            }
+            else
+            {
+                _errorMessage = "Failed to load exercise collections.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void OnCollectionChanged(ChangeEventArgs e)
+    {
+        var selectedId = e.Value?.ToString();
+        exerciseCollectionSelected.Id = Guid.Parse(selectedId);
     }
 }

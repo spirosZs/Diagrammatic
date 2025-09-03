@@ -13,7 +13,9 @@ namespace Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
         /// <summary>
         /// The Exercise id to either add or remove to this Exercise Collection.
         /// </summary>
-        [Required]
         public Guid ExerciseId { get; set; }
+
+        public string ParticipationCode { get; set; }
     }
+
 }
