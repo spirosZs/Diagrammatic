@@ -1,0 +1,46 @@
+﻿@page "/diagram-evaluation"
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService toastService
+
+<h3>Diagram Evaluations</h3>
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <iframe src="http://localhost:8083/diagramEvaluation" width="100%" height="600"></iframe>
+        </Authorized>
+        <NotAuthorized>
+            <p>You must be logged in to view this page.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code{
+    private async Task LoadDiagramEvaluation()
+    {
+        string _errorMessage;
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await httpClient.GetAsync("/diagramEvaluation");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                _errorMessage = "Failed to load diagram evaluation.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+}
