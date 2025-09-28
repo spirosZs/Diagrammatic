@@ -3,16 +3,44 @@
   "WorkspaceRootPath": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\service\\authstateproviderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\service\\authstateproviderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\login.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\login.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\exercises\\exercisecreation.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\exercises\\exercisecreation.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\layout\\mainlayout.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\layout\\mainlayout.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\exercisecollection\\exercisecollection.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\exercisecollection\\exercisecollection.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\exam\\exam.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\exam\\exam.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\weather.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\weather.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\diagramevaluation\\diagramevaluation.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\diagramevaluation\\diagramevaluation.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|c:\\users\\spiro\\documents\\github\\diagrammatic\\diagrammatic\\components\\pages\\exercisecollection\\addremoveonexercisecollection.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{48BBD8BC-8909-4BDA-BBE6-78A62567B21A}|Diagrammatic_test.csproj|solutionrelative:components\\pages\\exercisecollection\\addremoveonexercisecollection.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +50,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 9,
           "Children": [
             {
               "$type": "Bookmark",
@@ -34,41 +62,132 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "NavMenu.razor",
-              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Layout\\NavMenu.razor",
-              "RelativeDocumentMoniker": "Components\\Layout\\NavMenu.razor",
-              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Layout\\NavMenu.razor",
-              "RelativeToolTip": "Components\\Layout\\NavMenu.razor",
-              "ViewState": "AgIAACoAAAAAAAAAAAAAADoAAABEAAAAAAAAAA==",
+              "DocumentIndex": 2,
+              "Title": "ExerciseCreation.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Exercises\\ExerciseCreation.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\Exercises\\ExerciseCreation.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Exercises\\ExerciseCreation.razor",
+              "RelativeToolTip": "Components\\Pages\\Exercises\\ExerciseCreation.razor",
+              "ViewState": "AgIAAEoAAAAAAAAAAAAkwE8AAABFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-09-08T17:54:42.516Z",
+              "WhenOpened": "2025-09-28T14:53:25.358Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "App.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\App.razor",
+              "RelativeDocumentMoniker": "Components\\App.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\App.razor",
+              "RelativeToolTip": "Components\\App.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-28T14:49:11.776Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "Exam.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Exam\\Exam.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\Exam\\Exam.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Exam\\Exam.razor",
+              "RelativeToolTip": "Components\\Pages\\Exam\\Exam.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-28T14:31:11.038Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ExerciseCollection.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\ExerciseCollection\\ExerciseCollection.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\ExerciseCollection\\ExerciseCollection.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\ExerciseCollection\\ExerciseCollection.razor",
+              "RelativeToolTip": "Components\\Pages\\ExerciseCollection\\ExerciseCollection.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-28T14:31:05.362Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Weather.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Weather.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\Weather.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Weather.razor",
+              "RelativeToolTip": "Components\\Pages\\Weather.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-28T14:26:58.42Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "Login.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Login.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\Login.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\Login.razor",
+              "RelativeToolTip": "Components\\Pages\\Login.razor",
+              "ViewState": "AgIAABoAAAAAAAAAAAAowEwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-23T15:46:41.223Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MainLayout.razor",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Layout\\MainLayout.razor",
+              "RelativeDocumentMoniker": "Components\\Layout\\MainLayout.razor",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Layout\\MainLayout.razor",
+              "RelativeToolTip": "Components\\Layout\\MainLayout.razor",
+              "ViewState": "AgIAABsAAAAAAAAAAAAowEEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-09-23T15:46:31.162Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuthStateProviderService.cs",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Service\\AuthStateProviderService.cs",
+              "RelativeDocumentMoniker": "Components\\Service\\AuthStateProviderService.cs",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Service\\AuthStateProviderService.cs",
+              "RelativeToolTip": "Components\\Service\\AuthStateProviderService.cs",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAowC4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-23T15:39:38.182Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAADYAAAAAAAAAAAAAAFEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-20T11:51:47.816Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
               "Title": "DiagramEvaluation.razor",
               "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\DiagramEvaluation\\DiagramEvaluation.razor",
               "RelativeDocumentMoniker": "Components\\Pages\\DiagramEvaluation\\DiagramEvaluation.razor",
               "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\DiagramEvaluation\\DiagramEvaluation.razor",
               "RelativeToolTip": "Components\\Pages\\DiagramEvaluation\\DiagramEvaluation.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAaAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-09-08T17:07:22.977Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AddRemoveOnExerciseCollection.razor",
-              "DocumentMoniker": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\ExerciseCollection\\AddRemoveOnExerciseCollection.razor",
-              "RelativeDocumentMoniker": "Components\\Pages\\ExerciseCollection\\AddRemoveOnExerciseCollection.razor",
-              "ToolTip": "C:\\Users\\spiro\\Documents\\GitHub\\Diagrammatic\\Diagrammatic\\Components\\Pages\\ExerciseCollection\\AddRemoveOnExerciseCollection.razor",
-              "RelativeToolTip": "Components\\Pages\\ExerciseCollection\\AddRemoveOnExerciseCollection.razor",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-06-29T14:14:49.399Z",
               "EditorCaption": ""
             }
           ]

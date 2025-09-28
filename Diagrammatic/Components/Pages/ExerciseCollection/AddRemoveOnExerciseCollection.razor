@@ -9,92 +9,85 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inherits LayoutComponentBase
+@attribute [Authorize]
 @attribute [StreamRendering]
 
 <h3>Add Exercise Collection</h3>
 
-<CascadingAuthenticationState>
-    <AuthorizeView Context="auth">
-        <Authorized >
-            @if (_exerciseCollections == null)
-            {
-                <p>Loading exercise collections...</p>
-            }
-            else
-            {
-                <EditForm Model="_requestModel" OnValidSubmit="HandleValidSubmit">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
 
+@if (_exerciseCollections == null)
+{
+    <p>Loading exercise collections...</p>
+}
+else
+{
+    <EditForm Model="_requestModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            @switch (_requestModel.Operation)
+            {
+
+                case ExerciseCollectionOperation.SetParticipationCode:
                     <div class="form-group">
-                        @switch (_requestModel.Operation)
-                        {
-
-                            case ExerciseCollectionOperation.SetParticipationCode:
-                                <div class="form-group">
-                                    <label for="Exam">Exam ID</label>
-                                    <select id="Exam" class="form-control" @bind="exerciseCollectionSelected.Id">
-                                        <option selected disabled>---Select Exam---</option>
-                                        @foreach (var collection in _exerciseCollections)
-                                        {
-                                            <option value="@collection.Id">@collection.Name</option>
-                                        }
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="participationCode">Participation Code</label>
-                                    <input id="participationCode" class="form-control"
-                                           @bind="_requestModel.ParticipationCode" />
-                                </div>
-                                break;
-
-                            case ExerciseCollectionOperation.AddExercise:
-                            case ExerciseCollectionOperation.RemoveExercise:
-                                <div class="form-group">
-                                    <label for="exerciseCollection">Exercise Collection</label>
-                                    <select id="exerciseCollection" class="form-control" @bind="exerciseCollectionSelected.Id">
-                                        <option selected disabled>---Select Collection---</option>
-                                        @foreach (var collection in _exerciseCollections)
-                                        {
-                                            <option value="@collection.Id">@collection.Name</option>
-                                        }
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="exercise">Exercise</label>
-                                    <select id="exercise" class="form-control" @bind="_requestModel.ExerciseId">
-                                        <option selected disabled>---Select Exercise---</option>
-                                        @foreach (var exercise in _exercises)
-                                        {
-                                            <option value="@exercise.Id">@exercise.Name</option>
-                                        }
-                                    </select>
-                                </div>
-                                break;
-                        }
-
-                        <label for="exercise">Operation</label>
-                        <select id="exercise" class="form-control" @onchange="OnOperationChanged">
-                            <option selected disabled>---Select Operation---</option>
-                           
-                            @foreach (var op in Enum.GetValues<ExerciseCollectionOperation>())
+                        <label for="Exam">Exam ID</label>
+                        <select id="Exam" class="form-control" @bind="exerciseCollectionSelected.Id">
+                            <option selected disabled>---Select Exam---</option>
+                            @foreach (var collection in _exerciseCollections)
                             {
-                                <option value="@op">@op</option>
+                                <option value="@collection.Id">@collection.Name</option>
                             }
-              
                         </select>
                     </div>
-                    <br />
-                    <button type="submit" class="btn btn-primary">Add Exercise</button>
-                </EditForm>
+                    <div class="form-group">
+                        <label for="participationCode">Participation Code</label>
+                        <input id="participationCode" class="form-control"
+                               @bind="_requestModel.ParticipationCode" />
+                    </div>
+                    break;
+
+                case ExerciseCollectionOperation.AddExercise:
+                case ExerciseCollectionOperation.RemoveExercise:
+                    <div class="form-group">
+                        <label for="exerciseCollection">Exercise Collection</label>
+                        <select id="exerciseCollection" class="form-control" @bind="exerciseCollectionSelected.Id">
+                            <option selected disabled>---Select Collection---</option>
+                            @foreach (var collection in _exerciseCollections)
+                            {
+                                <option value="@collection.Id">@collection.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exercise">Exercise</label>
+                        <select id="exercise" class="form-control" @bind="_requestModel.ExerciseId">
+                            <option selected disabled>---Select Exercise---</option>
+                            @foreach (var exercise in _exercises)
+                            {
+                                <option value="@exercise.Id">@exercise.Name</option>
+                            }
+                        </select>
+                    </div>
+                    break;
+            }
+
+            <label for="exercise">Operation</label>
+            <select id="exercise" class="form-control" @onchange="OnOperationChanged">
+                <option selected disabled>---Select Operation---</option>
+
+                @foreach (var op in Enum.GetValues<ExerciseCollectionOperation>())
+                {
+                    <option value="@op">@op</option>
                 }
-        </Authorized>
-        <NotAuthorized>
-            <p>You are not authorized to view this page.</p>
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
+
+            </select>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary">Add Exercise</button>
+    </EditForm>
+}
 
 @if (_errorMessage != null)
 {
@@ -125,7 +118,7 @@
             await LoadExerciseCollections();
             await LoadExercises(); // <-- load exercises here
             StateHasChanged();
-        } 
+        }
     }
 
     private async Task LoadExerciseCollections()
@@ -183,7 +176,7 @@
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         string url;
-        HttpResponseMessage response ;
+        HttpResponseMessage response;
         string responseMessage;
 
         try
@@ -243,9 +236,9 @@
             HttpResponseMessage response;
             if (selectedOp == ExerciseCollectionOperation.AddExercise ||
              selectedOp == ExerciseCollectionOperation.RemoveExercise)
-                 response = await httpClient.GetAsync("/api/exerciseCollection");
+                response = await httpClient.GetAsync("/api/exerciseCollection");
             else
-                 response = await httpClient.GetAsync("/api/exam");
+                response = await httpClient.GetAsync("/api/exam");
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();

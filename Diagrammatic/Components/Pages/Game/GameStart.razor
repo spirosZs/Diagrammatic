@@ -10,58 +10,51 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
+@attribute [Authorize]
 
 <h3>Start Game</h3>
 
-<CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
-            <form @onsubmit="HandleValidSubmit">
-                    <div class="form-group">
-                        <label for="examId">Game ID</label>
-                        <select id="examId" class="form-control" @onchange="OnExamSelected">
-                            <option value="">-- Select --</option>
-                            @foreach (var collection in _examCollection)
-                            {
-                                <option>@collection.Name</option>
-                            }
-                        </select>
-                    </div>
+<form @onsubmit="HandleValidSubmit">
+        <div class="form-group">
+            <label for="examId">Game ID</label>
+            <select id="examId" class="form-control" @onchange="OnExamSelected">
+                <option value="">-- Select --</option>
+                @foreach (var collection in _examCollection)
+                {
+                    <option>@collection.Name</option>
+                }
+            </select>
+        </div>
 
-                    <br />
-                    <button type="submit" class="btn btn-primary">Start Game</button>
-            </form>
+        <br />
+        <button type="submit" class="btn btn-primary">Start Game</button>
+</form>
 
-            <br />
+<br />
 
-            @if (_gameInfo != null)
-            {
-                <div class="card mt-3 p-3">
-                    <h5>Game Info</h5>
-                    <ul>
-                        <li><strong>Category:</strong> @_gameInfo.Category</li>
-                        <li><strong>Has Started:</strong> @_gameInfo.HasStarted</li>
-                        <li><strong>Has Ended:</strong> @_gameInfo.HasEnded</li>
-                        <li><strong>Date Started:</strong> @_gameInfo.DateStarted</li>
-                        <li><strong>Date Ended:</strong> @_gameInfo.DateEnded</li>
-                        <li><strong>Participants:</strong> @_gameInfo.Participants</li>
-                        <li><strong>Total Exercises:</strong> @_gameInfo.TotalExercises</li>
-                        <li><strong>Date Time To End:</strong> @_gameInfo.DateTimeToEnd</li>
-                        <li><strong>Date Time To Next Exercise:</strong> @_gameInfo.DateTimeToNextExercise</li>
-                    </ul>
-                </div>
-            }
+@if (_gameInfo != null)
+{
+    <div class="card mt-3 p-3">
+        <h5>Game Info</h5>
+        <ul>
+            <li><strong>Category:</strong> @_gameInfo.Category</li>
+            <li><strong>Has Started:</strong> @_gameInfo.HasStarted</li>
+            <li><strong>Has Ended:</strong> @_gameInfo.HasEnded</li>
+            <li><strong>Date Started:</strong> @_gameInfo.DateStarted</li>
+            <li><strong>Date Ended:</strong> @_gameInfo.DateEnded</li>
+            <li><strong>Participants:</strong> @_gameInfo.Participants</li>
+            <li><strong>Total Exercises:</strong> @_gameInfo.TotalExercises</li>
+            <li><strong>Date Time To End:</strong> @_gameInfo.DateTimeToEnd</li>
+            <li><strong>Date Time To Next Exercise:</strong> @_gameInfo.DateTimeToNextExercise</li>
+        </ul>
+    </div>
+}
 
-            @if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <div class="alert alert-danger mt-3">@_errorMessage</div>
-            }
-        </Authorized>
-        <NotAuthorized>
-            <p>You are not authorized to start a game.</p>
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="alert alert-danger mt-3">@_errorMessage</div>
+}
+
 
 @code {
     private Guid _selectedExamId;

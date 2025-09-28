@@ -10,80 +10,66 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
+@attribute [Authorize]
 
 <h3>Create Exercise</h3>
 
-<CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
-            @if (_exerciseCollections == null)
-            {
-                <p>Loading exercise collections...</p>
-            }
-            else
-            {
-                <EditForm Model="_exerciseCreateDto" OnValidSubmit="HandleValidSubmit" FormName="exerciseCreationForm">
-                    <ChildContent Context="editFormContext">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
+<EditForm Model="_exerciseCreateDto" OnValidSubmit="HandleValidSubmit" FormName="exerciseCreationForm">
+    <ChildContent Context="editFormContext">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-                        <div class="form-group">
-                            <label for="name">Name</label>
-                            <input id="name" class="form-control" @bind="_exerciseCreateDto.Name" />
-                            <_errorMessage For="@(() => _exerciseCreateDto.Name)" />
-                        </div>
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input id="name" class="form-control" @bind="_exerciseCreateDto.Name" />
+            <_errorMessage For="@(() => _exerciseCreateDto.Name)" />
+        </div>
 
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <select id="category" class="form-control" @bind="_exerciseCreateDto.Category" namespace ="---Select---"> 
-                                <option value="diagram">Diagram</option>
-                                <option value="path">Path</option>
-                            </select>
-                            <_errorMessage For="@(() => _exerciseCreateDto.ProblemType)" />
-                        </div>
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" class="form-control" @bind="_exerciseCreateDto.Category" namespace ="---Select---"> 
+                <option value="diagram">Diagram</option>
+                <option value="path">Path</option>
+            </select>
+            <_errorMessage For="@(() => _exerciseCreateDto.ProblemType)" />
+        </div>
 
-                        <div class="form-group">
-                            <label for="weight">Weight</label>
-                            <input type="number" id="weight" class="form-control" @bind="_exerciseCreateDto.Weight" />
-                            <_errorMessage For="@(() => _exerciseCreateDto.Weight)" />
-                        </div>
+        <div class="form-group">
+            <label for="weight">Weight</label>
+            <input type="number" id="weight" class="form-control" @bind="_exerciseCreateDto.Weight" />
+            <_errorMessage For="@(() => _exerciseCreateDto.Weight)" />
+        </div>
 
-                        <div class="form-group">
-                            <label for="timeToComplete">Time to Complete (seconds)</label>
-                            <input type="number" id="timeToComplete" class="form-control" @bind="_exerciseCreateDto.TimeToComplete" />
-                            <_errorMessage For="@(() => _exerciseCreateDto.TimeToComplete)" />
-                        </div>
+        <div class="form-group">
+            <label for="timeToComplete">Time to Complete (seconds)</label>
+            <input type="number" id="timeToComplete" class="form-control" @bind="_exerciseCreateDto.TimeToComplete" />
+            <_errorMessage For="@(() => _exerciseCreateDto.TimeToComplete)" />
+        </div>
 
-                        <div class="form-group">
-                            <label for="exerciseCollection">Exercise Collection</label>
-                            <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
-                                <option selected disabled>---Select Collection---</option>
-                                @foreach (var collection in _exerciseCollections)
-                                {
-                                    <option value="@collection.Id">@collection.Name</option>
-                                }
-                            </select>
-                            <_errorMessage For="@(() => _exerciseCreateDto.ExerciseCollectionId)" />
-                        </div>
+        <div class="form-group">
+            <label for="exerciseCollection">Exercise Collection</label>
+            <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
+                <option selected disabled>---Select Collection---</option>
+                @foreach (var collection in _exerciseCollections)
+                {
+                    <option value="@collection.Id">@collection.Name</option>
+                }
+            </select>
+            <_errorMessage For="@(() => _exerciseCreateDto.ExerciseCollectionId)" />
+        </div>
 
-                        <br />
-                        <button type="submit" class="btn btn-primary">Submit</button>
-                    </ChildContent>
-                </EditForm>
+        <br />
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </ChildContent>
+</EditForm>
 
-                <br />
+<br />
 
-                <br />
-                <a class="nav-link active" href="delete-exercise">
-                    Do you want to delete an Exercise? Click here.
-                </a>
-            }
-        </Authorized>
-        <NotAuthorized>
-            <p>You are not authorized to view this page.</p>
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
+<br />
+<a class="nav-link active" href="delete-exercise">
+    Do you want to delete an Exercise? Click here.
+</a>
+
 
 @if (_errorMessage != null)
 {
@@ -91,7 +77,7 @@
 }
 
 @code {
-    private List<ExerciseCollectionDto> _exerciseCollections;
+    private List<ExerciseCollectionDto> _exerciseCollections = new();
     private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
     private string _errorMessage;
 

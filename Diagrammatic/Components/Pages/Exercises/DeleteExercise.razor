@@ -10,41 +10,27 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
+@attribute [Authorize]
 
 <h3>Delete Exercise</h3>
 
-<CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
-            <EditForm Model="_exerciseDeletion" OnValidSubmit="HandleValidSubmit" FormName="exerciseCollectionCreationForm">
-                <ChildContent Context="editFormContext">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                    <div class="form-group">
-                        <label for="id">Exercise Id</label>
-                        <input id="id" class="form-control" @bind="@_exerciseDeletion.Id" />
-                        <_errorMessage For="@(() => _exerciseDeletion.Id)" />
-                    </div>
+<EditForm Model="_exerciseDeletion" OnValidSubmit="HandleValidSubmit" FormName="exerciseCollectionCreationForm">
+    <ChildContent Context="editFormContext">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label for="id">Exercise Id</label>
+            <input id="id" class="form-control" @bind="@_exerciseDeletion.Id" />
+            <_errorMessage For="@(() => _exerciseDeletion.Id)" />
+        </div>
                    
-                    <br />
+        <br />
 
-                    <button type="submit" class="btn btn-primary">Submit</button>
-
-
-                </ChildContent>
-            </EditForm>
-        </Authorized>
-        <NotAuthorized>
+        <button type="submit" class="btn btn-primary">Submit</button>
 
 
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
-
-   
-
-
-                
+    </ChildContent>
+</EditForm>                
 
 @code {
     public ExerciseDeletion _exerciseDeletion = new ExerciseDeletion();

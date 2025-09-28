@@ -1,37 +1,30 @@
 ﻿@using Diagrammatic_test.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@inherits LayoutComponentBase
+@inject AuthStateProviderService AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject RefreshService RefreshService
-@inherits LayoutComponentBase
 
+<CascadingAuthenticationState>
+    <div class="page">
+        <div class="sidebar">
+            <NavMenu />
+        </div>
 
-
-
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-         <CascadingAuthenticationState>
+        <main>
             <AuthorizeView>
                 <NotAuthorized>
                     <div class="top-row px-4">
-                        <a class="nav-link active" aria-current="page" href="login">Log in</a>
-                        <a class="nav-link active" aria-current="page" href="register">Sign Up</a>
+                        <a class="nav-link active" href="login">Log in</a>
+                        <a class="nav-link active" href="register">Sign Up</a>
                     </div>
                 </NotAuthorized>
-            </AuthorizeView>
-        </CascadingAuthenticationState>
 
-        <CascadingAuthenticationState>
-            <AuthorizeView>
                 <Authorized>
-                    <div class="top-row px-4">
+                    <div class="top-row px-4 d-flex align-items-center">
                         <Dropdown Color="DropdownColor.Secondary" Split="true">
-                            <DropdownActionButton>Secondary</DropdownActionButton>
+                            <DropdownActionButton>Actions</DropdownActionButton>
                             <DropdownToggleButton />
                             <DropdownMenu>
                                 <DropdownItem To="#" Type="DropdownItemType.Link">Action</DropdownItem>
@@ -39,19 +32,22 @@
                                 <DropdownItem To="#" Type="DropdownItemType.Link">Something else here</DropdownItem>
                             </DropdownMenu>
                         </Dropdown>
-                        <a class="nav-link" aria-current="page" href="login" @onclick="Logout">Log out</a>
+
+                        <a class="nav-link ms-3" href="#" @onclick="Logout">Log out</a>
                     </div>
                 </Authorized>
             </AuthorizeView>
-        </CascadingAuthenticationState>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+            <!-- Render the page content -->
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+</CascadingAuthenticationState>
 
 <BlazoredToasts />
+
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
@@ -59,32 +55,11 @@
 </div>
 
 @code {
-
-    private bool isActive = false;
-
     private async Task Logout()
     {
-        ((AuthStateProviderService)AuthenticationStateProvider).SetUserLoggedOut();
+        await AuthStateProvider.MarkUserAsLoggedOut();
         RefreshService.ClearTokens();
         toastService.ShowSuccess("You have successfully logged out.");
         NavigationManager.NavigateTo("/login");
-        StateHasChanged(); // Update the UI
     }
-
-    private void OnSelected(string selection)
-    {
-        Console.WriteLine(selection);
-    }
-    
-
-    private void Show()
-    {
-        isActive = true;
-    }
-
-    private void Hide()
-    {
-        isActive = false;
-    }
-}
 }

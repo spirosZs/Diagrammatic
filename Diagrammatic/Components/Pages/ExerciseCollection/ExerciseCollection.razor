@@ -1,89 +1,66 @@
 ﻿@page "/create-exerciseCollection"
+@attribute [Authorize]
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
-@using Diagrammatic_test.Components.Shared.Dto
-@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
-@using Newtonsoft.Json.Linq
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-@inherits LayoutComponentBase
-@attribute [StreamRendering]
-
 
 <h3>Create Exercise Collection</h3>
-<CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
-            <EditForm Model="_exerciseCollectionCreateDto" OnValidSubmit="HandleValidSubmit" FormName="exerciseCollectionCreationForm">
-                <ChildContent Context="editFormContext">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
 
-                    <div class="form-group">
-                        <label for="name">Name</label>
-                        <input id="name" class="form-control" @bind="@_exerciseCollectionCreateDto.Name" />
-                        <_errorMessage For="@(() => _exerciseCollectionCreateDto.Name)" />
-                    </div>
+<EditForm Model="_exerciseCollectionCreateDto" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
 
-                    <div class="form-group">
-                        <label for="category">Category</label>
-                        <input id="category" class="form-control" @bind="@_exerciseCollectionCreateDto.Category" />
-                        <_errorMessage For="@(() => _exerciseCollectionCreateDto.Category)" />
-                    </div>
+    <div class="form-group mb-3">
+        <label for="name">Name</label>
+        <input id="name" class="form-control" @bind="_exerciseCollectionCreateDto.Name" />
+    </div>
 
-                    <br />
+    <div class="form-group mb-3">
+        <label for="category">Category</label>
+        <input id="category" class="form-control" @bind="_exerciseCollectionCreateDto.Category" />
+    </div>
 
-                    <button type="submit" class="btn btn-primary">Submit</button>
-
-                    
-                </ChildContent>
-            </EditForm>
-         </Authorized>
-        <NotAuthorized>
-
-
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
 
 @code {
     private ExerciseCollectionCreateDto _exerciseCollectionCreateDto = new ExerciseCollectionCreateDto();
-    
 
-    //Create Exercise
     private async Task HandleValidSubmit()
     {
-        //gets user token to authenticate
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
-
+        string token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            toastService.ShowError("You are not authenticated. Please log in.");
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
 
         try
         {
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            var request = await httpClient.PostAsJsonAsync("/api/exerciseCollection", _exerciseCollectionCreateDto); ;
-            if (request.IsSuccessStatusCode)
-            {
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-                //show success notification
-                toastService.ShowSuccess("Exercise Collection created Succesfully!!");
-                //_errorMessage = null;
+            var response = await httpClient.PostAsJsonAsync("/api/exerciseCollection", _exerciseCollectionCreateDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                toastService.ShowSuccess("Exercise Collection created successfully!");
+                _exerciseCollectionCreateDto = new ExerciseCollectionCreateDto(); // reset form
             }
             else
             {
-                // Handle failure
-                var errorContent = await request.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Error creating exercise: {request.StatusCode}, {errorContent}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                toastService.ShowError($"Failed to create collection: {errorContent}");
             }
         }
         catch (Exception ex)
         {
-             string _errorMessage;
-            // Handle exception
-            _errorMessage = ex.Message;
+            toastService.ShowError($"Error: {ex.Message}");
         }
     }
 }

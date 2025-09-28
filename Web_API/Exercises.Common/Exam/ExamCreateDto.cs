@@ -13,12 +13,14 @@ namespace Exercises.Common.Exam
         /// <summary>
         /// The exercise collection Guid to create an exam from
         /// </summary>
-        [Required] 
+        [Required]
         public Guid ExerciseCollectionId { get; set; }
-        
+
         /// <summary>
         /// A string representing a category label for this entity.
         /// </summary> 
         public string Category { get; set; }
+
+        public string ParticipationCode { get; set;}
     }
 }

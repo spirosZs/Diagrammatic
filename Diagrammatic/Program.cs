@@ -1,59 +1,84 @@
 using Diagrammatic_test.Components;
 using Diagrammatic_test.Services;
 using Blazored.Toast;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ------------------------
+// Add services to DI
+// ------------------------
+
+// Add Razor components
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-//builder.Services.AddScoped<DiagrammaticService>();
 
+// HTTP client for your API
 builder.Services.AddHttpClient("DiagrammaticClient", client =>
 {
     client.BaseAddress = new Uri("http://localhost:8083/gameHub");
 });
+
+// Refresh service (singleton + hosted service)
 builder.Services.AddSingleton<RefreshService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<RefreshService>());
-// Authentication services
+
+// ------------------------
+// Authentication / Authorization
+// ------------------------
+
+// Register AuthStateProviderService as concrete type
+builder.Services.AddScoped<AuthStateProviderService>();
+
+// Register it as the AuthenticationStateProvider
 builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProviderService>();
+
+// Add authentication with default scheme
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";        // redirect unauthorized users
+        options.AccessDeniedPath = "/error"; // optional
+    });
+
+// Add authorization core for Blazor
 builder.Services.AddAuthorizationCore();
 
-// Add Blazored.Toast services
-builder.Services.AddBlazoredToast();
-builder.Services.AddRazorPages();
-builder.Services.AddBlazorBootstrap();
+// ------------------------
+// Third-party services
+// ------------------------
 builder.Services.AddBlazoredLocalStorage();
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme,
-        options =>
-        {
-            options.LoginPath = new PathString("/login");
-            options.AccessDeniedPath = new PathString("/error");
-        });
+builder.Services.AddBlazoredToast();
+builder.Services.AddBlazorBootstrap();
 
+// Razor Pages (required for Blazor Server)
+builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
+
+// ------------------------
+// Build the app
+// ------------------------
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ------------------------
+// Configure HTTP request pipeline
+// ------------------------
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Map Blazor components
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

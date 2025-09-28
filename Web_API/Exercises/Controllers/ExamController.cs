@@ -110,7 +110,7 @@ namespace Exercises.Controllers
         /// <response code="400">Bad request.</response>  
         /// <response code="404">Not found.</response>  
         [HttpPatch("{id}", Name = "Update[controller]")]
-        [Produces("application/json")]
+        [Produces("application/json-patch+json")]
         [ProducesResponseType(200, Type = typeof(ExamDto))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

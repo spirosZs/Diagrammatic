@@ -15,5 +15,7 @@ namespace Diagrammatic_test.Components.Pages.Exam.Dto
         /// A string representing a category label for this entity.
         /// </summary> 
         public string Category { get; set; }
+
+        public string ParticipationCode {  get; set; }
     }
 }

@@ -11,30 +11,25 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @attribute [AllowAnonymous]
 
-
 <div class="row">
     <div class="col-md-4">
         <EditForm Model="loginModel" FormName="loginForm">
             <DataAnnotationsValidator />
-            <h2>Log in your account.</h2>
+            <h2>Log in your account</h2>
             <hr />
             <div class="form-floating mb-3">
-                <input id="email" @bind="@loginModel.email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <input id="email" @bind="@loginModel.email" class="form-control" autocomplete="username" placeholder="name@example.com" />
                 <label for="email">Email</label>
                 <ValidationMessage For="@(() => loginModel.email)" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
-                <input id="password" type="password" @bind="@loginModel.password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <input id="password" type="password" @bind="@loginModel.password" class="form-control" autocomplete="current-password" placeholder="password" />
                 <label for="password">Password</label>
                 <ValidationMessage For="@(() => loginModel.password)" class="text-danger" />
             </div>
+            <button class="w-100 btn btn-lg btn-primary" @onclick="loginUser">Login</button>
             <br />
-            <button class="w-100 btn btn-lg btn-primary" @onclick="@loginUser">login</button>
-            <br />
-            <a class="nav-link active" aria-current="page" href="register">Don't have an account?Click here</a>
-
-
-            
+            <a class="nav-link active" href="register">Don't have an account? Click here</a>
         </EditForm>
     </div>
 </div>
@@ -42,50 +37,40 @@
 @code {
     private UserLoginRequest loginModel = new UserLoginRequest();
 
-
     private async Task loginUser()
     {
-        // Debugging statements to check model values before sending the request
-        // Console.WriteLine($"Email: {loginModel.email}");
-        //Console.WriteLine($"Password: {loginModel.password}");
-
-        var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-        var response = await httpClient.PostAsJsonAsync("/identity/login", loginModel);
-        string responseMessage="";
-
-        if (response.IsSuccessStatusCode)
+        try
         {
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            var response = await httpClient.PostAsJsonAsync("/identity/login", loginModel);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                toastService.ShowError("Invalid Username or Password");
+                return;
+            }
+
             var authSuccessResponse = await response.Content.ReadFromJsonAsync<AuthSuccessResponse>();
-            responseMessage = $"Successful Login!";
-            //responseMessage = $"Successful Login! Token: {authSuccessResponse.Token}";
 
-            // Set the tokens for the Refresh services
+            // Store token locally
+            await LocalStorage.SetItemAsync("authToken", authSuccessResponse.Token);
             RefreshService.SetTokens(authSuccessResponse.Token, authSuccessResponse.RefreshToken);
-            // Set the authentication state
-            await StoreToken(authSuccessResponse.Token);
-            ((AuthStateProviderService)AuthenticationStateProvider).SetUserAuthenticated(loginModel.email);
-            //show success notification
-            toastService.ShowSuccess("Welcome " + loginModel.email + "!");
-            // Navigate to home page
+
+            // Update Blazor authentication state
+            await ((AuthStateProviderService)AuthenticationStateProvider)
+                .MarkUserAsAuthenticated(authSuccessResponse.Token);
+
+            // Delay slightly to let UI update
+            StateHasChanged();
+
+            toastService.ShowSuccess($"Welcome {loginModel.email}!");
+
+            // Redirect to home/dashboard
             NavigationManager.NavigateTo("/weather");
-
         }
-        else
+        catch (Exception ex)
         {
-            var authFailedResponse = await response.Content.ReadFromJsonAsync<AuthFailedResponse>();
-            responseMessage = "Invalid Username or Password";
-            // Show an error toast notification
-            toastService.ShowError(responseMessage);
-            //responseMessage = "Failed Login: " + string.Join(", ", authFailedResponse.Errors);
-
-            
+            toastService.ShowError($"Login failed: {ex.Message}");
         }
-    }
-
-
-    //store token after login so that user can create exercises etc. and do things that require user authentication
-    private async Task StoreToken(string token)
-    {
-        await LocalStorage.SetItemAsync("authToken", token);
     }
 }

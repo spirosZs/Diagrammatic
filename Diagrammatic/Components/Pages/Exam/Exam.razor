@@ -10,47 +10,44 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
+@attribute [Authorize]
 
 <h3>Exam Creation</h3>
-<CascadingAuthenticationState>
-    <AuthorizeView>
-        <Authorized>
-            <EditForm Model="_examDto" OnValidSubmit="HandleValidSubmit" FormName="examCreationForm">
-                <ChildContent Context="editFormContext">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
 
-                <div class="form-group">
-                    <label for="exerciseCollectionId">Select Exercise Collection</label>
-                    <select id="exerciseCollectionId" class="form-control" @onchange="OnExerciseCollectionSelected" >
-                        <option value="">-- Select --</option>
-                        @foreach (var collection in _exerciseCollections)
-                        {
-                                <option>@collection.Name</option>
-                        }
-                    </select>
-                </div>
+<EditForm Model="_examDto" OnValidSubmit="HandleValidSubmit" FormName="examCreationForm">
+    <ChildContent Context="editFormContext">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-                <div class="form-group">
-                    <label for="name">Exercise Collection ID</label>
-                        <input id="name" class="form-control" @bind="@_examDto.ExerciseCollectionId" disabled />
-                </div>
+        <div class="form-group">
+            <label for="exerciseCollectionId">Select Exercise Collection</label>
+            <select id="exerciseCollectionId" class="form-control" @onchange="OnExerciseCollectionSelected" >
+                <option value="">-- Select --</option>
+                @foreach (var collection in _exerciseCollections)
+                {
+                        <option>@collection.Name</option>
+                }
+            </select>
+        </div>
 
-                <div class="form-group">
-                    <label for="category">Category</label>
-                        <input id="category" class="form-control" @bind="@_examDto.Category" disabled />
-                </div>
+        <div class="form-group">
+            <label for="name">Exercise Collection ID</label>
+                <input id="name" class="form-control" @bind="@_examDto.ExerciseCollectionId" disabled />
+        </div>
 
-                <br />
-                <button type="submit" class="btn btn-primary">Submit</button>
-                </ChildContent>
-            </EditForm>
-        </Authorized>
-        <NotAuthorized> 
-        </NotAuthorized>
-    </AuthorizeView>
-</CascadingAuthenticationState>
+        <div class="form-group">
+            <label for="category">Category</label>
+                <input id="category" class="form-control" @bind="@_examDto.Category" disabled />
+        </div
 
+        <div class="form-group"> 
+            <label for="participationCode">Participation Code</label> 
+            <input id="participationCode" class="form-control" @bind="@_examDto.ParticipationCode" />
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </ChildContent>
+</EditForm>
 
 @code {
     private ExamCreateDto _examDto;

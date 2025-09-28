@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using AutoMapper;
 using Exercises.Common;
 using Exercises.Common.Abstractions;
@@ -11,8 +7,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Exercises.Controllers
 {
@@ -103,38 +105,47 @@ namespace Exercises.Controllers
         protected async Task<IActionResult> UpdateAsync<TResponseDto>(Guid id, JArray payload,
             CancellationToken token = default)
         {
-            var entityRepo = await _entityService.GetAsync(id, token);
-            if (entityRepo == null)
-            {
-                return NotFound();
+            try {
+                var entityRepo = await _entityService.GetAsync(id, token);
+                if (entityRepo == null)
+                {
+                    return NotFound();
+                }
+
+                var assembly = typeof(IExerciseService).Assembly;
+                var entityType = GetEntityUpdateType(entityRepo);
+                var entityName = typeof(TResource).Name;
+
+                var dtoType =
+                    Type.GetType(
+                        $"Exercises.Common.{entityName}.{entityType}{entityName}{CrudOperationType.Update}Dto, {assembly}");
+
+                dynamic entityDto = Mapper.Map(entityRepo, typeof(TResource), dtoType);
+                dynamic patchDocument = payload.ToObject(typeof(JsonPatchDocument<>).MakeGenericType(dtoType));
+
+                patchDocument.ApplyTo(entityDto);
+           
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                Mapper.Map(entityDto, entityRepo);
+
+                dynamic service = _serviceProvider.GetCrudService($"{entityType}{typeof(TResource).Name}");
+
+                entityRepo = await service.UpdateAsync(entityRepo, token);
+                dynamic entity = Mapper.Map<TResponseDto>(entityRepo);
+                return Ok(entity);
             }
-
-            var assembly = typeof(IExerciseService).Assembly;
-            var entityType = GetEntityUpdateType(entityRepo);
-            var entityName = typeof(TResource).Name;
-
-            var dtoType =
-                Type.GetType(
-                    $"Exercises.Common.{entityName}.{entityType}{entityName}{CrudOperationType.Update}Dto, {assembly}");
-
-            dynamic entityDto = Mapper.Map(entityRepo, typeof(TResource), dtoType);
-            dynamic patchDocument = payload.ToObject(typeof(JsonPatchDocument<>).MakeGenericType(dtoType));
-
-            patchDocument.ApplyTo(entityDto);
-
-            if (!ModelState.IsValid)
+             catch (Exception ex)
             {
-                return BadRequest(ModelState);
+                var logger = HttpContext.RequestServices
+                                .GetRequiredService<ILogger<ExamController>>();
+                logger.LogError(ex, "Failed to apply patch for Exam {ExamId}", id);
+                throw; // let it bubble up, but now you’ll see the cause in logs
             }
-
-            Mapper.Map(entityDto, entityRepo);
-
-            dynamic service = _serviceProvider.GetCrudService($"{entityType}{typeof(TResource).Name}");
-
-            entityRepo = await service.UpdateAsync(entityRepo, token);
-            dynamic entity = Mapper.Map<TResponseDto>(entityRepo);
-
-            return Ok(entity);
+                
         }
 
         protected async Task<IActionResult> DeleteAsync<TResponseDto>(Guid id, CancellationToken token = default)
