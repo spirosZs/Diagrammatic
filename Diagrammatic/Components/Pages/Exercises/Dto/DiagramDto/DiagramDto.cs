@@ -1,14 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Diagrammatic_test.Components.Shared.Dto;
 
-namespace Exercises.Common.Diagram
+namespace Diagrammatic_test.Components.Pages.Exercises.Dto.DiagramDto
 {
-    public class DiagramCreateDto : EntityCreateDtoBase
+    public class DiagramDto : EntityDtoBase
     {
         /// <summary>
         /// A url string of an image for this diagram.
         /// </summary>
         public string Url { get; set; }
-        
+
         /// <summary>
         /// A json definition of this diagram.
         /// </summary>

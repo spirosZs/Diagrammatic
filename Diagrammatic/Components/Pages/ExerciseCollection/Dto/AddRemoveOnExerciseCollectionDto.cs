@@ -16,6 +16,8 @@ namespace Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
         public Guid ExerciseId { get; set; }
 
         public string ParticipationCode { get; set; }
+
+        public string ExerciseName { get; set; }
     }
 
 }

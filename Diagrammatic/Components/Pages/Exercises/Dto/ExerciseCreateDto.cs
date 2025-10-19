@@ -1,6 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Diagrammatic_test.Components.Shared.Dto;
+using System.ComponentModel.DataAnnotations;
 
-namespace Diagrammatic_test.Components.Shared.Dto
+namespace Diagrammatic_test.Components.Pages.Exercises.Dto
 {
     public class ExerciseDto : EntityDtoBase
     {
@@ -43,6 +44,6 @@ namespace Diagrammatic_test.Components.Shared.Dto
 
         public string Name { get; set; }
 
-        public Boolean published {  get; set; }
+        public bool published {  get; set; }
     }
 }   

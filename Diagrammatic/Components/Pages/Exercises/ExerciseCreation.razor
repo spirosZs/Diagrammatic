@@ -1,5 +1,7 @@
 ﻿@page "/create-exercise"
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
+@using Diagrammatic_test.Components.Pages.Exercises.Dto
+@using Diagrammatic_test.Components.Pages.Exercises.Dto.DiagramDto
 @using Diagrammatic_test.Components.Shared.Dto
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
@@ -19,33 +21,68 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
+        <!-- Name -->
         <div class="form-group">
             <label for="name">Name</label>
             <input id="name" class="form-control" @bind="_exerciseCreateDto.Name" />
             <_errorMessage For="@(() => _exerciseCreateDto.Name)" />
         </div>
 
+        <!-- Category -->
         <div class="form-group">
             <label for="category">Category</label>
-            <select id="category" class="form-control" @bind="_exerciseCreateDto.Category" namespace ="---Select---"> 
+            <select id="category" class="form-control" @bind="_exerciseCreateDto.Category">
+                <option selected disabled>---Select---</option>
                 <option value="diagram">Diagram</option>
                 <option value="path">Path</option>
             </select>
-            <_errorMessage For="@(() => _exerciseCreateDto.ProblemType)" />
+            <_errorMessage For="@(() => _exerciseCreateDto.Category)" />
         </div>
 
+        <!-- Conditional Diagram Fields -->
+        @if (_exerciseCreateDto.Category == "diagram")
+        {
+            <div class="form-group mt-3 p-3 border rounded">
+                <h5>Diagram Details</h5>
+
+                <div class="form-group">
+                    <label for="diagramUrl">Diagram URL</label>
+                    <input id="diagramUrl" class="form-control"
+                           @bind="_exerciseCreateDto.Url" />
+                    <_errorMessage For="@(() => _exerciseCreateDto.Url)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="diagramDefinition">Diagram Definition (JSON)</label>
+                    <textarea id="diagramDefinition" class="form-control" rows="4"
+                              @bind="_exerciseCreateDto.Definition"></textarea>
+                    <_errorMessage For="@(() => _exerciseCreateDto.Definition)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="code">Exercise Code</label>
+                    <textarea id="code" class="form-control" rows="3"
+                              @bind="_exerciseCreateDto.Code"></textarea>
+                    <_errorMessage For="@(() => _exerciseCreateDto.Code)" />
+                </div>
+            </div>
+        }
+
+        <!-- Weight -->
         <div class="form-group">
             <label for="weight">Weight</label>
             <input type="number" id="weight" class="form-control" @bind="_exerciseCreateDto.Weight" />
             <_errorMessage For="@(() => _exerciseCreateDto.Weight)" />
         </div>
 
+        <!-- Time to Complete -->
         <div class="form-group">
             <label for="timeToComplete">Time to Complete (seconds)</label>
             <input type="number" id="timeToComplete" class="form-control" @bind="_exerciseCreateDto.TimeToComplete" />
             <_errorMessage For="@(() => _exerciseCreateDto.TimeToComplete)" />
         </div>
 
+        <!-- Exercise Collection -->
         <div class="form-group">
             <label for="exerciseCollection">Exercise Collection</label>
             <select id="exerciseCollection" class="form-control" @bind="_exerciseCreateDto.ExerciseCollectionId">
@@ -64,12 +101,11 @@
 </EditForm>
 
 <br />
-
 <br />
+
 <a class="nav-link active" href="delete-exercise">
     Do you want to delete an Exercise? Click here.
 </a>
-
 
 @if (_errorMessage != null)
 {
@@ -78,7 +114,8 @@
 
 @code {
     private List<ExerciseCollectionDto> _exerciseCollections = new();
-    private ExerciseCreateDto _exerciseCreateDto = new ExerciseCreateDto();
+    private DiagramExerciseCreateDto _exerciseCreateDto = new DiagramExerciseCreateDto();
+
     private string _errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -104,13 +141,16 @@
         {
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var response = await httpClient.GetAsync("/api/exerciseCollection");
+
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+                _exerciseCollections = Newtonsoft.Json.JsonConvert
+                    .DeserializeObject<List<ExerciseCollectionDto>>(json);
             }
             else
             {
@@ -127,7 +167,6 @@
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         _exerciseCreateDto.published = false;
-
         _exerciseCreateDto.ProblemType = _exerciseCreateDto.Category == "diagram" ? "0" : "1";
 
         try
@@ -136,12 +175,36 @@
             httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var request = await httpClient.PostAsJsonAsync("/api/exercise", _exerciseCreateDto);
+            HttpResponseMessage request;
+
+            // ✅ Send proper DTO type based on category
+            if (_exerciseCreateDto.Category == "diagram")
+            {
+                // send full DiagramExerciseCreateDto
+                request = await httpClient.PostAsJsonAsync("/api/exercise", _exerciseCreateDto);
+            }
+            else
+            {
+                // send plain ExerciseCreateDto
+                var baseDto = new ExerciseCreateDto
+                {
+                    Name = _exerciseCreateDto.Name,
+                    Category = _exerciseCreateDto.Category,
+                    ProblemType = _exerciseCreateDto.ProblemType,
+                    Weight = _exerciseCreateDto.Weight,
+                    TimeToComplete = _exerciseCreateDto.TimeToComplete,
+                    ExerciseCollectionId = _exerciseCreateDto.ExerciseCollectionId,
+                    published = _exerciseCreateDto.published
+                };
+
+                request = await httpClient.PostAsJsonAsync("/api/exercise", baseDto);
+            }
 
             if (request.IsSuccessStatusCode)
             {
                 toastService.ShowSuccess("Exercise created successfully!");
                 _errorMessage = null;
+                _exerciseCreateDto = new DiagramExerciseCreateDto(); // reset form
             }
             else
             {
