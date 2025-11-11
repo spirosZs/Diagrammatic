@@ -1,6 +1,7 @@
 ﻿@page "/diagram-evaluation"
 @attribute [AllowAnonymous]
 @using System.Net.Http.Json
+@using Diagrammatic_test.Components.Pages.Exercises.Dto
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.WebUtilities
 @inject IHttpClientFactory HttpClientFactory
@@ -25,6 +26,13 @@
         }
     </div>
 }
+else if (isExamFinished)
+{
+    <div class="p-3 border rounded shadow-sm text-center">
+        <h4>✅ Exam Completed!</h4>
+        <p>Thank you for participating. You may close this page now.</p>
+    </div>
+}
 else
 {
     <div class="p-3 border rounded shadow-sm">
@@ -32,6 +40,11 @@ else
 
         @if (isExerciseLoaded)
         {
+            <div class="alert alert-info">
+                <strong>Time remaining:</strong>
+                @($"{remainingSeconds / 60:D2}:{remainingSeconds % 60:D2}")
+            </div>
+
             <iframe src="http://localhost:8083/diagramEvaluation" width="100%" height="600"></iframe>
         }
         else
@@ -44,21 +57,28 @@ else
 @code {
     private bool isAuthorizedWithCode = false;
     private bool isExerciseLoaded = false;
+    private bool isExamFinished = false;
     private string enteredCode = "";
     private string? _errorMessage;
     private string? exerciseName;
     private Guid exerciseId;
+    private Guid currentGameId;
+    private int remainingSeconds;
+    private System.Threading.Timer? countdownTimer;
+    private bool isTimerRunning = false;
+
+    private const int PollRetries = 5;
+    private const int PollDelayMs = 1000;
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if link contains ?accessToken=...
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accessToken", out var token))
         {
             if (AuthenticationStateProvider is AuthStateProviderService authProvider)
             {
                 await authProvider.MarkUserAsAuthenticated(token!);
-                await LocalStorage.SetItemAsync("authToken", token!); // persist token
+                await LocalStorage.SetItemAsync("authToken", token!);
             }
         }
     }
@@ -88,8 +108,8 @@ else
                     _errorMessage = null;
                     toastService.ShowSuccess("Participation code accepted.");
 
-                    // STEP 2: Call /api/game/{id}/exercise
-                    await LoadGameExerciseAsync(participateResult.Id);
+                    currentGameId = participateResult.Id;
+                    await LoadGameExerciseAsync(currentGameId);
                 }
                 else
                 {
@@ -124,17 +144,26 @@ else
             }
 
             var response = await httpClient.GetAsync($"/api/game/{gameId}/exercise");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                await EndExamAsync();
+                return;
+            }
+
             if (response.IsSuccessStatusCode)
             {
                 var exerciseResponse = await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
-                if (exerciseResponse is not null)
+                if (exerciseResponse is null || exerciseResponse.Id == Guid.Empty)
                 {
-                    exerciseId = exerciseResponse.Id;
-                    exerciseName = exerciseResponse.Name;
-
-                    // STEP 3: Call /api/exercise/{id}
-                    await LoadExerciseAsync(exerciseId);
+                    await EndExamAsync();
+                    return;
                 }
+
+                exerciseId = exerciseResponse.Id;
+                exerciseName = exerciseResponse.Name;
+
+                await LoadExerciseAsync(exerciseId);
             }
             else
             {
@@ -149,6 +178,10 @@ else
 
     private async Task LoadExerciseAsync(Guid id)
     {
+        isTimerRunning = false;
+        countdownTimer?.Dispose();
+        countdownTimer = null;
+
         try
         {
             var token = await LocalStorage.GetItemAsync<string>("authToken");
@@ -163,8 +196,15 @@ else
             var response = await httpClient.GetAsync($"/api/exercise/{id}");
             if (response.IsSuccessStatusCode)
             {
-                isExerciseLoaded = true;
-                toastService.ShowSuccess($"Loaded exercise: {exerciseName}");
+                var exerciseResponse = await response.Content.ReadFromJsonAsync<ExerciseDto>();
+                if (exerciseResponse is not null)
+                {
+                    isExerciseLoaded = true;
+                    remainingSeconds = exerciseResponse.TimeToComplete;
+                    StartCountdown();
+
+                    toastService.ShowSuccess($"Loaded exercise: {exerciseName}");
+                }
             }
             else
             {
@@ -179,10 +219,138 @@ else
         }
     }
 
-    // === Models ===
+    private void StartCountdown()
+    {
+        countdownTimer?.Dispose();
+        isTimerRunning = true;
+
+        countdownTimer = new System.Threading.Timer(async _ =>
+        {
+            if (!isTimerRunning)
+                return;
+
+            if (remainingSeconds > 0)
+            {
+                remainingSeconds--;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            // Timer reached zero
+            isTimerRunning = false;
+            countdownTimer?.Dispose();
+            await InvokeAsync(() => toastService.ShowInfo("Exercise time completed. Checking for next exercise..."));
+
+            var next = await PollForNextExerciseAsync(currentGameId, exerciseId);
+
+            if (next is null)
+            {
+                await InvokeAsync(async () => await EndExamAsync());
+            }
+            else
+            {
+                exerciseId = next.Id;
+                exerciseName = next.Name;
+                await InvokeAsync(async () => await LoadExerciseAsync(exerciseId));
+            }
+        }, null, 1000, 1000);
+    }
+
+    private async Task<GameExerciseResponse?> PollForNextExerciseAsync(Guid gameId, Guid previousId)
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+        if (!string.IsNullOrEmpty(token))
+        {
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+
+        GameExerciseResponse? lastResponse = null;
+
+        for (int i = 0; i < PollRetries; i++)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync($"/api/game/{gameId}/exercise");
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return null;
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var next = await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
+                    if (next is null || next.Id == Guid.Empty)
+                        return null;
+
+                    if (next.Id != previousId)
+                        return next;
+
+                    lastResponse = next;
+                }
+            }
+            catch
+            {
+                // ignore transient errors
+            }
+
+            await Task.Delay(PollDelayMs);
+        }
+
+        // After all retries, still same ID — end game
+        await EndGameOnServerAsync(gameId);
+        return null;
+    }
+
+    private async Task EndGameOnServerAsync(Guid gameId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            if (!string.IsNullOrEmpty(token))
+            {
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await httpClient.PostAsync($"/api/game/{gameId}/end", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await InvokeAsync(() => toastService.ShowSuccess("Exam ended successfully."));
+            }
+            else
+            {
+                await InvokeAsync(() => toastService.ShowWarning($"Exam ended locally, but server responded {response.StatusCode}."));
+            }
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() => toastService.ShowError($"Failed to end game: {ex.Message}"));
+        }
+    }
+
+    private async Task EndExamAsync()
+    {
+        isTimerRunning = false;
+        countdownTimer?.Dispose();
+        isExamFinished = true;
+        isExerciseLoaded = false;
+
+        await InvokeAsync(StateHasChanged);
+        toastService.ShowSuccess("🎉 Exam completed!");
+    }
+
+    public void Dispose()
+    {
+        isTimerRunning = false;
+        countdownTimer?.Dispose();
+    }
+
     private class ParticipationResponse
     {
-        public Guid Id { get; set; } // returned exam/game ID
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
 
@@ -191,6 +359,10 @@ else
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string ProblemType { get; set; } = string.Empty;
+        public int Weight { get; set; }
+        public int TimeToComplete { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public DateTime Created { get; set; }
         public Guid ExerciseCollectionId { get; set; }
     }
 }

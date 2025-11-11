@@ -106,7 +106,7 @@ namespace Exercises.Controllers
         public async Task<IActionResult> GetRoundExercise([FromRoute] Guid id, CancellationToken token = default)
         {
             var exercise = await _examService.GetExercise(id, token);
-            var mappedExercise = Mapper.Map<ExerciseGameDto>(exercise);
+            var mappedExercise = Mapper.Map<ExerciseDto>(exercise);
             return Ok(mappedExercise);
         }
 
