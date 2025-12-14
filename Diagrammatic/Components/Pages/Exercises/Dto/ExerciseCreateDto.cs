@@ -1,6 +1,4 @@
 ﻿using Diagrammatic_test.Components.Shared.Dto;
-using System.ComponentModel.DataAnnotations;
-
 namespace Diagrammatic_test.Components.Pages.Exercises.Dto
 {
     public class ExerciseDto : EntityDtoBase
@@ -11,7 +9,15 @@ namespace Diagrammatic_test.Components.Pages.Exercises.Dto
         public Guid? ExerciseCollectionId { get; set; }
         public string Category { get; set; }
         public string Name { get; set; }
+        public class DiagramInfo
+        {
+            public string Url { get; set; } = string.Empty;
+            public string Definition { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public bool Published { get; set; }
+        }
 
+        public DiagramInfo Diagram { get; set; } = new();
     }
 
     public class ExerciseCreateDto

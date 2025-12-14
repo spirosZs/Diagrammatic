@@ -1,3 +1,4 @@
+using Exercises.Common.Diagram;
 using System;
 
 namespace Exercises.Common.Exercise
@@ -29,5 +30,10 @@ namespace Exercises.Common.Exercise
         /// A string representing a category label for this entity.
         /// </summary> 
         public string Category { get; set; }
+
+        /// <summary>
+        /// If exercise is a Diagram returns its Diagram solution.
+        /// </summary> 
+        public DiagramCreateDto Diagram { get; set; }
     }
 }
