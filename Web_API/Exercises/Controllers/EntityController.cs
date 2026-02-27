@@ -80,26 +80,35 @@ namespace Exercises.Controllers
         protected async Task<IActionResult> CreateAsync<TResponseDto>(JObject payload, CancellationToken token = default)
         {
             var assembly = typeof(IExerciseService).Assembly;
-            var entityType = GetEntityCreateType(payload);
+            var entityType = GetEntityCreateType(payload); // e.g., "Diagram"
             var entityName = typeof(TResource).Name;
 
-            var dtoType =
-                Type.GetType(
-                    $"Exercises.Common.{entityName}.{entityType}{entityName}{CrudOperationType.Create}Dto, {assembly}");
+            var dtoType = Type.GetType(
+                $"Exercises.Common.{entityName}.{entityType}{entityName}CreateDto, {assembly}");
+
             dynamic dto = payload.ToObject(dtoType);
+
+            // Minimal Diagram fix: ensure DiagramId is mapped correctly
+            if (entityType == "Diagram" && payload.ContainsKey("diagramId"))
+            {
+                dto.DiagramId = payload.GetValue("diagramId").ToObject<Guid?>();
+            }
 
             if (!OnOperationValidation(dto, dtoType))
             {
                 return BadRequest(ModelState);
             }
 
-            dynamic service = _serviceProvider.GetCrudService($"{entityType}{typeof(TResource).Name}");
+            dynamic service = _serviceProvider.GetCrudService($"{entityType}{entityName}");
             dynamic entityRepo = await service.CreateAsync(dto, token);
+
             dynamic entity = Mapper.Map<TResponseDto>(entityRepo);
 
             string controllerName = ControllerContext.RouteData.Values["controller"].ToString();
-            return CreatedAtRoute($"Get{controllerName}", new {id = entity.Id, token}, entity);
+            return CreatedAtRoute($"Get{controllerName}", new { id = entity.Id, token }, entity);
         }
+
+
 
 
         protected async Task<IActionResult> UpdateAsync<TResponseDto>(Guid id, JArray payload,

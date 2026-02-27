@@ -1,4 +1,4 @@
-﻿namespace Diagrammatic_test.Components.Pages.Exercises.Dto.DiagramDto
+﻿namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Diagram
 {
     public class DiagramExerciseCreateDto : ExerciseCreateDto
     {

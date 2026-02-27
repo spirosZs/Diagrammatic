@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Exercises.Common;
 using Exercises.Common.Abstractions;
 using Exercises.Common.Exercise;
@@ -12,6 +8,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace Exercises.Controllers
@@ -42,12 +43,27 @@ namespace Exercises.Controllers
         [Produces("application/json")]
         [ProducesResponseType(200, Type = typeof(IEnumerable<ExerciseDto>))]
         [ProducesResponseType(400)]
-//        [SwaggerResponseHeader(200, "X-Pagination", "string", "Pagination metadata for this request.")]
-        public virtual async Task<IActionResult> GetAsync([FromQuery] ExerciseFilter filter,
-            CancellationToken token = default)
+        //        [SwaggerResponseHeader(200, "X-Pagination", "string", "Pagination metadata for this request.")]
+        public async Task<IActionResult> GetAsync([FromQuery] ExerciseFilter filter, CancellationToken token = default)
         {
-            return await GetAsync<ExerciseDto>(filter, token);
+            var result = await base.GetAsync<ExerciseDto>(filter, token);
+
+            if (!(result is OkObjectResult okResult))
+                return result;
+
+            var exercises = okResult.Value as IEnumerable<ExerciseDto>;
+            if (exercises == null)
+                return Ok(new List<ExerciseDto>());
+
+            var distinctExercises = exercises
+                .GroupBy(e => e.Name)
+                .Select(g => g.First())
+                .OrderBy(e => e.Name)
+                .ToList();
+
+            return Ok(distinctExercises);
         }
+
 
         /// <summary>
         /// Get a single Exercise.

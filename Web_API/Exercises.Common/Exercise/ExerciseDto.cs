@@ -35,5 +35,7 @@ namespace Exercises.Common.Exercise
         /// If exercise is a Diagram returns its Diagram solution.
         /// </summary> 
         public DiagramCreateDto Diagram { get; set; }
+
+        public Guid? DiagramId { get; set; }
     }
 }

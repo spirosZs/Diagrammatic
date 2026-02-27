@@ -1,19 +1,15 @@
-using Exercises.Common.Diagram;
-using System;
-
-namespace Exercises.Common.Exercise
+﻿namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Diagram
 {
-    public class DiagramExerciseCreateDto : ExerciseCreateDto
+    public class DiagramExerciseDto : ExerciseDto
     {
         /// <summary>
         /// The diagram solution for this Exercise.
         /// </summary>
-        public DiagramCreateDto Diagram { get; set; }
-        
+        public DiagramDto Diagram { get; set; }
+
         /// <summary>
         /// The code that will be presented to the students when asked to find the correct diagram.
         /// </summary>
         public string Code { get; set; }
-
     }
 }

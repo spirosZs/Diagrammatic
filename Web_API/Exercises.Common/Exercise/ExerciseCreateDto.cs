@@ -31,5 +31,7 @@ namespace Exercises.Common.Exercise
         /// The time in which a student has to complete the exercise expressed in seconds.
         /// </summary>
         public int TimeToComplete { get; set; }
+
+        public Guid? DiagramId { get; set; }
     }
 }   
