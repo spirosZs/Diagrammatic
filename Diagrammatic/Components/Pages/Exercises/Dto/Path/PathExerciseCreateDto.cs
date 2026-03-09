@@ -4,10 +4,6 @@ namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Path
 {
     public class PathExerciseCreateDto : ExerciseCreateDto
     {
-        /// <summary>
-        /// A diagram definition for this Exercise.
-        /// </summary>
-        public DiagramExerciseCreateDto Diagram { get; set; }
 
         /// <summary>
         /// The correct paths solution for this Exercise as specified by the teacher.

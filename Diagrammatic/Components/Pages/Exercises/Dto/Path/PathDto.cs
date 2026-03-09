@@ -1,6 +1,8 @@
-﻿namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Path
+﻿using Diagrammatic_test.Components.Shared.Dto;
+
+namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Path
 {
-    public class PathDto
+    public class PathDto : EntityDtoBase
     {
         /// <summary>
         /// The path definition.

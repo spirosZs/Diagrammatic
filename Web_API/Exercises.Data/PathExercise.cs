@@ -1,8 +1,10 @@
+using System;
 
 namespace Exercises.Data
 {
     public class PathExercise : Exercise
     {
+        public Guid? DiagramId { get; set; }
         public Diagram Diagram { get; set; }
         public string[] Paths { get; set; }
         public double[] Credits { get; set; }

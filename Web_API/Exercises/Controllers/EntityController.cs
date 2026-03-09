@@ -89,7 +89,7 @@ namespace Exercises.Controllers
             dynamic dto = payload.ToObject(dtoType);
 
             // Minimal Diagram fix: ensure DiagramId is mapped correctly
-            if (entityType == "Diagram" && payload.ContainsKey("diagramId"))
+            if (payload.ContainsKey("diagramId"))
             {
                 dto.DiagramId = payload.GetValue("diagramId").ToObject<Guid?>();
             }
