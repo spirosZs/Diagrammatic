@@ -8,9 +8,8 @@
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inherits LayoutComponentBase
-@attribute [Authorize]
 @attribute [StreamRendering]
 
 <h3>Add Exercise Collection</h3>
@@ -126,7 +125,7 @@ else
     {
         try
         {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -151,7 +150,7 @@ else
     {
         try
         {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -175,7 +174,7 @@ else
 
     private async Task HandleValidSubmit()
     {
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        var token = await SessionStorage.GetItemAsync<string>("authToken");
         string url;
         HttpResponseMessage response;
         string responseMessage;
@@ -231,7 +230,7 @@ else
             var selectedOp = Enum.Parse<ExerciseCollectionOperation>(e.Value.ToString());
             _requestModel.Operation = selectedOp;
 
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             HttpResponseMessage response;

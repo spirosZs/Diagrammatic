@@ -1,18 +1,18 @@
-using System.Collections.Generic;
-using Exercises.Common.Diagram;
+﻿using Diagrammatic_test.Components.Pages.Exercises.Dto.Diagram;
 
-namespace Exercises.Common.Exercise
+namespace Diagrammatic_test.Components.Pages.Exercises.Dto.Path
 {
     public class PathExerciseDto : ExerciseDto
     {
         /// <summary>
         /// A diagram definition for this Exercise.
         /// </summary>
-        public DiagramDto Diagrams { get; set; }
-        
+        public DiagramDto Diagram { get; set; }
+
         /// <summary>
         /// The correct paths solution for this Exercise as specified by the teacher.
         /// </summary>
         public ICollection<PathDto> Paths { get; set; } = new List<PathDto>();
     }
+
 }

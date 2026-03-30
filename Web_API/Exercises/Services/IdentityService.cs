@@ -34,8 +34,16 @@ namespace Exercises.Services
             _roleManager = roleManager;
         }
 
-        public async Task<AuthenticationResult> RegisterAsync(string email, string password)
+        public async Task<AuthenticationResult> RegisterAsync(string email, string password,string role)
         {
+            if (role != Constants.ROLE_TEACHER && role != Constants.ROLE_STUDENT)
+            {
+                return new AuthenticationResult
+                {
+                    Errors = new[] { "Invalid role" }
+                };
+            }
+
             var existingUser = await _userManager.FindByEmailAsync(email);
 
             if (existingUser != null)
@@ -64,8 +72,7 @@ namespace Exercises.Services
                 };
             }
 
-            //TODO: refactor bellow line to something better
-            await _userManager.AddToRoleAsync(newUser, Constants.ROLE_TEACHER);
+            await _userManager.AddToRoleAsync(newUser, role);
 
             return await GenerateAuthenticationResultForUserAsync(newUser);
         }

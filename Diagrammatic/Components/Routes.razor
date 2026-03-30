@@ -1,6 +1,36 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            @* Changed from RouteView to AuthorizeRouteView.
+               This tells Blazor to check the AuthStateProvider 
+               before showing the page.
+            *@
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @* This runs if the user isn't logged in *@
+                    <div class="container mt-5">
+                        <div class="alert alert-warning">
+                            <h4>Access Denied</h4>
+                            <p>You need to be logged in to see this page.</p>
+                            <a href="login" class="btn btn-primary">Go to Login</a>
+                        </div>
+                    </div>
+                </NotAuthorized>
+                <Authorizing>
+                    @* This shows for a split second during the 'Refresh' 
+                       while SessionStorage is being read *@
+                    <p>Determining authentication state...</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

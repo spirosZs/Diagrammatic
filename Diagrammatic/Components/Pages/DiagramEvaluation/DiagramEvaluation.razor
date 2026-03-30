@@ -10,7 +10,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 
 @inject IHttpClientFactory HttpClientFactory
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inject IToastService toastService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -141,7 +141,7 @@ else
             if (AuthenticationStateProvider is AuthStateProviderService auth)
             {
                 await auth.MarkUserAsAuthenticated(token!);
-                await LocalStorage.SetItemAsync("authToken", token!);
+                await SessionStorage.SetItemAsync("authToken", token!);
             }
         }
     }
@@ -307,7 +307,7 @@ else
             HttpClientFactory.CreateClient("DiagrammaticClient");
 
         var token =
-            await LocalStorage.GetItemAsync<string>("authToken");
+            await SessionStorage.GetItemAsync<string>("authToken");
 
         if (!string.IsNullOrEmpty(token))
             client.DefaultRequestHeaders.Authorization =

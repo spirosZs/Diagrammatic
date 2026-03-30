@@ -8,7 +8,7 @@
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @attribute [AllowAnonymous]
 
 <div class="row">
@@ -53,7 +53,7 @@
             var authSuccessResponse = await response.Content.ReadFromJsonAsync<AuthSuccessResponse>();
 
             // Store token locally
-            await LocalStorage.SetItemAsync("authToken", authSuccessResponse.Token);
+            await SessionStorage.SetItemAsync("authToken", authSuccessResponse.Token);
             RefreshService.SetTokens(authSuccessResponse.Token, authSuccessResponse.RefreshToken);
 
             // Update Blazor authentication state

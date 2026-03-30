@@ -7,10 +7,9 @@
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
-@attribute [Authorize]
 
 <h3>Exam Creation</h3>
 
@@ -58,14 +57,26 @@
     {
         _examDto = new ExamCreateDto();
         _exerciseCollections = new List<ExerciseCollectionDto>();
+    }
 
-        await LoadExerciseCollections();
-
-        var authState = await ((AuthStateProviderService)AuthenticationStateProvider).GetAuthenticationStateAsync();
-        if (!authState.User.Identity.IsAuthenticated)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            toastService.ShowError("You are not authorized to view this page.");
-            NavigationManager.NavigateTo("/");
+            // Check Auth safely
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                toastService.ShowError("You are not authorized to view this page.");
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            // Load Data safely
+            await LoadExerciseCollections();
+            
+            // Force the UI to refresh now that we have data
+            StateHasChanged();
         }
     }
 
@@ -73,7 +84,8 @@
     {
         try
         {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            // This now works because OnAfterRender ensures JS Interop is available
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -81,7 +93,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
+                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json) ?? new();
             }
             else
             {
@@ -92,6 +104,7 @@
         {
             _errorMessage = ex.Message;
         }
+    
     }
 
     private void OnExerciseCollectionSelected(ChangeEventArgs e)
@@ -125,7 +138,7 @@
     {
         try
         {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 

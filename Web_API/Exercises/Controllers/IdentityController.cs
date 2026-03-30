@@ -36,7 +36,7 @@ namespace Exercises.Controllers
                 });
             }
 
-            var authResponse = await _identityService.RegisterAsync(request.Email, request.Password);
+            var authResponse = await _identityService.RegisterAsync(request.Email, request.Password,request.Role);
 
             if (!authResponse.Success)
             {

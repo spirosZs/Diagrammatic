@@ -1,46 +1,47 @@
-﻿using Blazored.LocalStorage;
+﻿using Blazored.SessionStorage; // Change from SessionStorage
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
 public class AuthStateProviderService : AuthenticationStateProvider
 {
-    private readonly ILocalStorageService _localStorage;
-    private readonly ClaimsPrincipal _anonymous = new ClaimsPrincipal(new ClaimsIdentity());
-    private ClaimsPrincipal _currentUser;
+    private readonly ISessionStorageService _sessionStorage;
+    private readonly ClaimsPrincipal _anonymous = new(new ClaimsIdentity());
 
-    public AuthStateProviderService(ILocalStorageService localStorage)
+    public AuthStateProviderService(ISessionStorageService sessionStorage)
     {
-        _localStorage = localStorage;
-        _currentUser = _anonymous;
+        _sessionStorage = sessionStorage;
     }
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        // ✅ Always return the current in-memory user (starts as anonymous)
-        return Task.FromResult(new AuthenticationState(_currentUser));
+        try
+        {
+            // Now fetching from SessionStorage
+            var token = await _sessionStorage.GetItemAsync<string>("authToken");
+
+            if (string.IsNullOrWhiteSpace(token) || token == "null")
+                return new AuthenticationState(_anonymous);
+
+            var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "User") }, "apiauth_type");
+            return new AuthenticationState(new ClaimsPrincipal(identity));
+        }
+        catch
+        {
+            return new AuthenticationState(_anonymous);
+        }
     }
 
-    // Called when user logs in
     public async Task MarkUserAsAuthenticated(string token)
     {
-        await _localStorage.SetItemAsync("authToken", token);
-
-        var identity = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.Name, "User"), // TODO: parse JWT for real claims
-        }, "apiauth_type");
-
-        _currentUser = new ClaimsPrincipal(identity);
-
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
+        await _sessionStorage.SetItemAsync("authToken", token);
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "User") }, "apiauth_type");
+        var user = new ClaimsPrincipal(identity);
+        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
     }
 
-    // Called when user logs out
     public async Task MarkUserAsLoggedOut()
     {
-        await _localStorage.RemoveItemAsync("authToken");
-        _currentUser = _anonymous;
-
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
+        await _sessionStorage.RemoveItemAsync("authToken");
+        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_anonymous)));
     }
 }

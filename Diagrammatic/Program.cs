@@ -1,9 +1,8 @@
 using Diagrammatic_test.Components;
 using Diagrammatic_test.Services;
 using Blazored.Toast;
-using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Blazored.SessionStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,27 +28,20 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<Refres
 // Authentication / Authorization
 // ------------------------
 
-// Register AuthStateProviderService as concrete type
+// 1. Register your custom service
 builder.Services.AddScoped<AuthStateProviderService>();
 
-// Register it as the AuthenticationStateProvider
-builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProviderService>();
+// 2. Map it to the standard Blazor provider
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<AuthStateProviderService>());
 
-// Add authentication with default scheme
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/login";        // redirect unauthorized users
-        options.AccessDeniedPath = "/error"; // optional
-    });
-
-// Add authorization core for Blazor
+// 3. Use AuthorizationCore (this is for Blazor logic)
 builder.Services.AddAuthorizationCore();
 
 // ------------------------
 // Third-party services
 // ------------------------
-builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddBlazoredSessionStorage();
 builder.Services.AddBlazoredToast();
 builder.Services.AddBlazorBootstrap();
 
@@ -74,9 +66,6 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 // Map Blazor components
 app.MapRazorComponents<App>()

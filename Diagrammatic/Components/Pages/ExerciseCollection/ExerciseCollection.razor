@@ -1,11 +1,10 @@
 ﻿@page "/create-exerciseCollection"
-@attribute [Authorize]
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
 @using Microsoft.AspNetCore.Components.Forms
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 
 <h3>Create Exercise Collection</h3>
 
@@ -31,7 +30,7 @@
 
     private async Task HandleValidSubmit()
     {
-        string token = await LocalStorage.GetItemAsync<string>("authToken");
+        string token = await SessionStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrWhiteSpace(token))
         {
             toastService.ShowError("You are not authenticated. Please log in.");
