@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@attribute [Authorize(Roles = "Teacher")]
 
 <h3>Create Exercise Collection</h3>
 

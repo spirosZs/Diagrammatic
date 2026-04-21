@@ -10,6 +10,7 @@
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
+@attribute [Authorize(Roles = "Teacher")]
 
 <h3>Exam Creation</h3>
 

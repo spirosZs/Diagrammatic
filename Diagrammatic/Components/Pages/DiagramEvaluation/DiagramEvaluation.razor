@@ -134,6 +134,19 @@ else
     // ---------------- INIT ----------------
     protected override async Task OnInitializedAsync()
     {
+        // 1. Check Authentication State
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // 2. If not logged in, redirect to register-student
+        if (user.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            // We pass the current URL as a returnUrl so they can come back after registering/logging in
+            NavigationManager.NavigateTo("/register-student?returnUrl=/diagram-evaluation");
+            return;
+        }
+
+        // --- YOUR EXISTING LOGIC BELOW ---
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
 
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accessToken", out var token))
