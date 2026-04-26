@@ -105,9 +105,22 @@ namespace Exercises.Controllers
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetRoundExercise([FromRoute] Guid id, CancellationToken token = default)
         {
-            var exercise = await _examService.GetExercise(id, token);
-            var mappedExercise = Mapper.Map<ExerciseDto>(exercise);
-            return Ok(mappedExercise);
+            try
+            {
+                var exercise = await _examService.GetExercise(id, token);
+
+                if (exercise == null)
+                {
+                    return NoContent();
+                }
+
+                var mappedExercise = Mapper.Map<ExerciseDto>(exercise);
+                return Ok(mappedExercise);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message, type = ex.GetType().Name });
+            }
         }
 
         /// <summary>

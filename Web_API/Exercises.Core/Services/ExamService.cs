@@ -1,4 +1,5 @@
 using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,11 +31,15 @@ namespace Exercises.Core.Services
 
         protected override void OnGetSingle(ref IQueryable<Exam> query)
         {
+            // First apply base authorization and filters
             base.OnGetSingle(ref query);
+
+            // Then include related data
             query = query
                 .Include(c => c.Participations)
                 .Include(c => c.Exercises)
-                .ThenInclude(exercise => ((exercise as DiagramExercise).Diagram));
+                .ThenInclude(exercise => ((exercise as DiagramExercise).Diagram))
+                .Include(c => c.CurrentExercise);
         }
 
         protected override void OnBeforeCreate(Exam exam)
@@ -112,12 +117,26 @@ namespace Exercises.Core.Services
                 throw new Exception($"Game already started");
             }
 
+            // Ensure there are exercises available before starting
+            if (exam.ExercisesOrdered == null || !exam.ExercisesOrdered.Any())
+            {
+                throw new Exception("Cannot start game: no exercises are configured for this exam.");
+            }
+
             var currentDate = DateTime.Now;
             exam.DateStarted = currentDate;
-            exam.CurrentExercise = exam.ExercisesOrdered.First();
+
+            // Set the current exercise to the first available exercise
+            var firstExercise = exam.ExercisesOrdered.FirstOrDefault();
+            if (firstExercise == null)
+            {
+                throw new Exception("Cannot start game: failed to determine the first exercise.");
+            }
+
+            exam.CurrentExercise = firstExercise;
 
             await _context.SaveChangesAsync(token);
-            await _hubContext.NotifyAllEvent(GameEventType.Started, new {examId});
+            await _hubContext.NotifyAllEvent(GameEventType.Started, new { examId });
 
             return exam;
         }

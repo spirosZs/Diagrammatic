@@ -1,4 +1,5 @@
-using Exercises.Common.Diagram;
+using Diagrammatic_test.Components.Pages.Exercises.Dto.Diagram;
+using Diagrammatic_test.Components.Shared.Dto;
 using System;
 
 namespace Exercises.Common.Exercise

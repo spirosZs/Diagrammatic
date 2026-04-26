@@ -186,47 +186,79 @@ else
     // ---------------- EXERCISES ----------------
     private async Task LoadGameExerciseAsync(Guid gameId)
     {
-        var client = await CreateClientAsync();
-        var response = await client.GetAsync($"/api/game/{gameId}/exercise");
-
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        try
         {
-            await EndExamAsync();
-            return;
+            var client = await CreateClientAsync();
+            var response = await client.GetAsync($"/api/game/{gameId}/exercise");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                await EndExamAsync();
+                return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Failed to load exercise: {response.StatusCode} - {errorContent}";
+                toastService.ShowError(_errorMessage);
+                return;
+            }
+
+            var exercise =
+                await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
+
+            exerciseId = exercise!.Id;
+            exerciseName = exercise.Name;
+
+            await LoadExerciseAsync(exerciseId);
         }
-
-        var exercise =
-            await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
-
-        exerciseId = exercise!.Id;
-        exerciseName = exercise.Name;
-
-        await LoadExerciseAsync(exerciseId);
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading exercise: {ex.Message}";
+            toastService.ShowError(_errorMessage);
+        }
     }
 
     private async Task LoadExerciseAsync(Guid id)
     {
-        isTimerRunning = false;
-        countdownTimer?.Dispose();
-
-        var client = await CreateClientAsync();
-        var response = await client.GetAsync($"/api/exercise/{id}");
-
-        var exercise =
-            await response.Content.ReadFromJsonAsync<ExerciseDto>();
-
-        exerciseCategory = exercise!.Category;
-        remainingSeconds = exercise.TimeToComplete;
-
-        if (exerciseCategory == "path")
+        try
         {
-            pathDefinition = exercise.Diagram?.Definition;
-            pathImageUrl = exercise.Diagram?.Url;
+            isTimerRunning = false;
+            countdownTimer?.Dispose();
+
+            var client = await CreateClientAsync();
+            var response = await client.GetAsync($"/api/exercise/{id}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Failed to load exercise details: {response.StatusCode} - {errorContent}";
+                toastService.ShowError(_errorMessage);
+                return;
+            }
+
+            var exercise =
+                await response.Content.ReadFromJsonAsync<ExerciseDto>();
+
+            exerciseCategory = exercise!.Category;
+            remainingSeconds = exercise.TimeToComplete;
+
+            if (exerciseCategory == "path")
+            {
+                pathDefinition = exercise.Diagram?.Definition;
+                pathImageUrl = exercise.Diagram?.Url;
+            }
+
+            isExerciseLoaded = true;
+
+            StartCountdown();
         }
-
-        isExerciseLoaded = true;
-
-        StartCountdown();
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading exercise details: {ex.Message}";
+            toastService.ShowError(_errorMessage);
+        }
     }
 
     // ---------------- TIMER ----------------
@@ -282,19 +314,35 @@ else
 
         for (int i = 0; i < PollRetries; i++)
         {
-            var response =
-                await client.GetAsync($"/api/game/{gameId}/exercise");
+            try
+            {
+                var response =
+                    await client.GetAsync($"/api/game/{gameId}/exercise");
 
-            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-                return null;
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    return null;
 
-            var next =
-                await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Poll attempt {i + 1} failed: {response.StatusCode} - {errorContent}");
+                    await Task.Delay(PollDelayMs);
+                    continue;
+                }
 
-            if (next!.Id != previousId)
-                return next;
+                var next =
+                    await response.Content.ReadFromJsonAsync<GameExerciseResponse>();
 
-            await Task.Delay(PollDelayMs);
+                if (next!.Id != previousId)
+                    return next;
+
+                await Task.Delay(PollDelayMs);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Poll attempt {i + 1} error: {ex.Message}");
+                await Task.Delay(PollDelayMs);
+            }
         }
 
         return null;
