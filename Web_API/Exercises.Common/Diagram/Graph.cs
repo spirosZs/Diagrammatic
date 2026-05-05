@@ -151,7 +151,10 @@ namespace Exercises.Common.Diagram
             {
                 if (!correctAnswers.Contains(answerGiven))
                 {
-                    score -= (Constants.MAX_SCORE / correctAnswersInitial.Count);
+                    if (correctAnswersInitial.Count > 0)
+                    {
+                        score -= (Constants.MAX_SCORE / correctAnswersInitial.Count);
+                    }
                 }
                 else
                 {

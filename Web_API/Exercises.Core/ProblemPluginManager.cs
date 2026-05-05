@@ -14,35 +14,33 @@ namespace Exercises.Core
 
         public ProblemPluginManager()
         {
-            var location = Path.GetDirectoryName(Environment.CurrentDirectory);
-            var root = Path.Combine(location, @"Exercises.Core\Plugins\Problem");
-
-            string folderName = root;
-
             Plugins = new List<IProblemPlugin>();
 
-            if (Directory.Exists(folderName))
+            var pluginDir = Path.Combine(
+                AppContext.BaseDirectory,
+                "Exercises.Core",
+                "Plugins",
+                "Problem");
+
+            if (Directory.Exists(pluginDir))
             {
-                var files = Directory.GetFiles(folderName);
-                foreach (var file in files)
+                foreach (var file in Directory.GetFiles(pluginDir, "*.dll"))
                 {
-                    if (file.EndsWith(".dll"))
-                    {
-                        Assembly.LoadFile(Path.GetFullPath(file));
-                    }
+                    Assembly.LoadFrom(Path.GetFullPath(file));
                 }
-            }
-            else
-            {
-                throw new Exception("Could not load plugin directory.");
             }
 
             var interfaceType = typeof(IProblemPlugin);
 
             var types = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a =>
+                {
+                    try { return a.GetTypes(); }
+                    catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t != null); }
+                })
                 .Where(p => interfaceType.IsAssignableFrom(p) && p.IsClass && !p.IsAbstract)
                 .ToArray();
+
             foreach (var type in types)
             {
                 Plugins.Add((IProblemPlugin) Activator.CreateInstance(type));

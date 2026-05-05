@@ -50,8 +50,19 @@ else if (isExamFinished)
                         Score: <strong>@item.Score</strong>
                     </div>
                 }
+
+                @if (item.Submitted)
+                {
+                    <div class="text-primary mt-1">Submitted</div>
+                }
             </div>
         }
+
+        <button class="btn btn-primary mt-3"
+                @onclick="SubmitAllAsync"
+                disabled="@isSubmitting">
+            @(isSubmitting ? "Submitting..." : "Submit")
+        </button>
     </div>
 }
 else
@@ -130,6 +141,8 @@ else
     private string? pathDefinition;
     private string? pathImageUrl;
     private string? pathAnswer;
+
+    private bool isSubmitting;
 
     // ---------------- INIT ----------------
     protected override async Task OnInitializedAsync()
@@ -405,6 +418,9 @@ else
                 Input = ExtractDiagramDefinitionFromUpload(inputJson)
             };
 
+            item.SubmissionData = payload.Input;
+            item.Submitted = false;
+
             toastService.ShowInfo("Comparing diagrams...");
 
             var response = await client.PostAsJsonAsync(
@@ -428,6 +444,91 @@ else
         {
             toastService.ShowError($"Compare error: {ex.Message}");
         }
+    }
+
+    private async Task SubmitAllAsync()
+    {
+        if (isSubmitting) return;
+
+        var pending = completedExercises
+            .Where(x => x.SubmissionData != null && !x.Submitted)
+            .ToList();
+
+        if (pending.Count == 0)
+        {
+            toastService.ShowWarning("No uploaded files to submit.");
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var client = await CreateClientAsync();
+            var failed = 0;
+
+            foreach (var item in pending)
+            {
+                var payload = new SubmissionCreateRequestDto
+                {
+                    Name = $"Submission for {item.Name}",
+                    ExamId = currentGameId,
+                    ExerciseId = item.ExerciseId,
+                    Data = ToServerDiagramShape(item.SubmissionData!)
+                };
+
+                try
+                {
+                    var response = await client.PostAsJsonAsync(
+                        "/api/submission",
+                        payload,
+                        new JsonSerializerOptions { PropertyNamingPolicy = null });
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var error = await response.Content.ReadAsStringAsync();
+                        toastService.ShowError($"Submit failed for {item.Name}: {error}");
+                        failed++;
+                        continue;
+                    }
+
+                    item.Submitted = true;
+                }
+                catch (Exception ex)
+                {
+                    toastService.ShowError($"Submit error for {item.Name}: {ex.Message}");
+                    failed++;
+                }
+            }
+
+            var submitted = pending.Count - failed;
+            if (submitted > 0)
+                toastService.ShowSuccess($"Submitted {submitted} exercise(s).");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private static SubmissionDiagramDefinition ToServerDiagramShape(DiagramDefinitionDto dto)
+    {
+        return new SubmissionDiagramDefinition
+        {
+            Nodes = dto.Nodes.Select(n => new SubmissionNodeDefinition
+            {
+                Id = n.Id,
+                Number = int.TryParse(n.Annotations.FirstOrDefault()?.Content, out var num) ? num : 0,
+                InEdges = n.InEdges.ToList(),
+                OutEdges = n.OutEdges.ToList()
+            }).ToList(),
+            Connectors = dto.Connectors.Select(c => new SubmissionConnectorDefinition
+            {
+                Id = c.Id
+            }).ToList()
+        };
     }
 
     private DiagramDefinitionDto ExtractDiagramDefinitionFromUpload(string rawJson)
@@ -515,6 +616,36 @@ else
         public Guid ExerciseId { get; set; }
         public string Name { get; set; } = "";
         public int? Score { get; set; }
+        public DiagramDefinitionDto? SubmissionData { get; set; }
+        public bool Submitted { get; set; }
+    }
+
+    private class SubmissionCreateRequestDto
+    {
+        public string Name { get; set; } = "";
+        public bool Published { get; set; } = true;
+        public Guid ExamId { get; set; }
+        public Guid ExerciseId { get; set; }
+        public object Data { get; set; } = default!;
+    }
+
+    private class SubmissionDiagramDefinition
+    {
+        public List<SubmissionNodeDefinition> Nodes { get; set; } = new();
+        public List<SubmissionConnectorDefinition> Connectors { get; set; } = new();
+    }
+
+    private class SubmissionNodeDefinition
+    {
+        public string Id { get; set; } = "";
+        public int Number { get; set; }
+        public List<string> InEdges { get; set; } = new();
+        public List<string> OutEdges { get; set; } = new();
+    }
+
+    private class SubmissionConnectorDefinition
+    {
+        public string Id { get; set; } = "";
     }
 
     private class ParticipationResponse

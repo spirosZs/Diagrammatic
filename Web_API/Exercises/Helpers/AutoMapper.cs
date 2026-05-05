@@ -97,7 +97,7 @@ namespace Exercises.Helpers
             cfg.CreateMap<SubmissionCreateDto, Submission>()
                 .ForMember(d => d.Data, opt =>
                     opt.MapFrom(s =>
-                        JsonSerializer.Serialize(s.Data, new JsonSerializerOptions())
+                        Newtonsoft.Json.JsonConvert.SerializeObject(s.Data)
                         )
                 );
 
