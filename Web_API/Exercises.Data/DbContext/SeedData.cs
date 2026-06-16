@@ -32,6 +32,7 @@ namespace Exercises.Data.DbContext
 
         private const string DIAGRAM_1 = "1572881a-88e0-443d-90d6-91f1fc6e8cec";
         private const string DIAGRAM_2 = "67f8a883-abdc-44aa-b923-2e741b6da7a7";
+        private const string DIAGRAM_PATH = "0a909782-173b-4eff-b64f-260742fdc430";
 
         public SeedData(ExercisesContext context, RoleManager<Role> roleManager, UserManager<User> userManager)
         {
@@ -125,7 +126,7 @@ namespace Exercises.Data.DbContext
         {
             var diagram1 = new Diagram
             {
-                Definition = "hi",
+                Definition = @"{          ""nodes"": [              {""id"": ""n1"", ""annotations"":[{""content"":""1""}]},              {""id"": ""n2"", ""annotations"":[{""content"":""2""}]},              {""id"": ""n3"", ""annotations"":[{""content"":""3""}]},              {""id"": ""n4"", ""annotations"":[{""content"":""4""}]}          ],          ""connectors"": [              {""id"": ""c1"", ""sourceID"": ""n1"", ""targetID"": ""n2""},              {""id"": ""c2"", ""sourceID"": ""n2"", ""targetID"": ""n3""},              {""id"": ""c3"", ""sourceID"": ""n3"", ""targetID"": ""n4""}          ]      }",
                 Name = "diagram 1",
                 Id = new Guid(DIAGRAM_1),
                 Created = DateTime.Now,
@@ -134,11 +135,22 @@ namespace Exercises.Data.DbContext
 
             var diagram2 = new Diagram
             {
-                Definition = "hi 2",
+                Definition = @"{          ""nodes"": [              {""id"": ""n1"", ""annotations"":[{""content"":""1""}]},              {""id"": ""n2"", ""annotations"":[{""content"":""2""}]},              {""id"": ""n3"", ""annotations"":[{""content"":""3""}]}          ],          ""connectors"": [              {""id"": ""c1"", ""sourceID"": ""n1"", ""targetID"": ""n2""},              {""id"": ""c2"", ""sourceID"": ""n2"", ""targetID"": ""n3""}          ]      }",
                 Name = "diagram 2",
                 Id = new Guid(DIAGRAM_2),
                 Created = DateTime.Now,
                 UserId = new Guid(TEACHER_1),
+            };
+
+            var pathDiagram = new Diagram
+            {
+                Id = new Guid(DIAGRAM_PATH),
+                Name = "PathDiagram",
+                Definition = "{}",
+                Created = DateTime.Now,
+                Published = false,
+                UserId = new Guid(TEACHER_1),
+                Url = "https://drive.google.com/drive/folders/1TfU4uPcUcts1dQj_087AYDkB6OeM8Qxe?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto",
             };
 
             var exercise1 = new DiagramExercise
@@ -221,6 +233,11 @@ namespace Exercises.Data.DbContext
             if (_context.ExerciseCollections.Find(collection1.Id) == null)
             {
                 _context.ExerciseCollections.Add(collection1);
+            }
+
+            if (_context.Diagrams.Find(pathDiagram.Id) == null)
+            {
+                _context.Diagrams.Add(pathDiagram);
             }
 
             await _context.SaveChangesAsync();

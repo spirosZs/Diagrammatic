@@ -1,0 +1,155 @@
+@page "/student-submissions"
+@using Diagrammatic_test.Components.Pages.Exercises.Dto
+@using Diagrammatic_test.Components.Pages.Submissions.Dto
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject IToastService toastService
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@attribute [Authorize(Roles = "Teacher")]
+
+<h3>Student Submissions</h3>
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <label for="studentName" class="form-label">Student Name</label>
+        <div class="input-group">
+            <span class="input-group-text">Submission for</span>
+            <input id="studentName" class="form-control" @bind="_studentName" placeholder="Enter student name" />
+            <button class="btn btn-primary" type="button" @onclick="SearchAsync" disabled="@_isLoading">
+                @(_isLoading ? "Searching..." : "Search")
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <p>Loading submissions...</p>
+}
+else if (_searched && _rows.Count == 0)
+{
+    <div class="alert alert-info">No submissions found for "Submission for @_lastQuery".</div>
+}
+else if (_rows.Count > 0)
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Exercise Name</th>
+                <th>Score</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in _rows)
+            {
+                <tr>
+                    <td>@row.ExerciseName</td>
+                    <td>@row.Score</td>
+                    <td>@row.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string _studentName = string.Empty;
+    private string _lastQuery = string.Empty;
+    private bool _isLoading;
+    private bool _searched;
+    private List<SubmissionRowDto> _rows = new();
+    private readonly Dictionary<Guid, string> _exerciseNameCache = new();
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_studentName))
+        {
+            toastService.ShowWarning("Please enter a student name to search.");
+            return;
+        }
+
+        _isLoading = true;
+        _searched = false;
+        _rows = new List<SubmissionRowDto>();
+
+        try
+        {
+            var token = await SessionStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                toastService.ShowError("You are not authenticated. Please log in.");
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var nameFilter = $"Submission for {_studentName.Trim()}";
+            _lastQuery = _studentName.Trim();
+
+            var requestUrl = $"/api/submission?Name={Uri.EscapeDataString(nameFilter)}";
+            var response = await httpClient.GetAsync(requestUrl);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                toastService.ShowError($"Failed to load submissions: {response.StatusCode}");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var submissions = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SubmissionDto>>(json)
+                              ?? new List<SubmissionDto>();
+
+            foreach (var submission in submissions)
+            {
+                var exerciseName = await GetExerciseNameAsync(httpClient, submission.ExerciseId);
+                _rows.Add(new SubmissionRowDto
+                {
+                    ExerciseName = exerciseName,
+                    Score = submission.Score,
+                    Date = submission.Created
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            _searched = true;
+        }
+    }
+
+    private async Task<string> GetExerciseNameAsync(HttpClient httpClient, Guid exerciseId)
+    {
+        if (_exerciseNameCache.TryGetValue(exerciseId, out var cachedName))
+        {
+            return cachedName;
+        }
+
+        try
+        {
+            var response = await httpClient.GetAsync($"/api/exercise/{exerciseId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                return "(unknown)";
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var exercise = Newtonsoft.Json.JsonConvert.DeserializeObject<ExerciseDto>(json);
+            var name = exercise?.Name ?? "(unknown)";
+            _exerciseNameCache[exerciseId] = name;
+            return name;
+        }
+        catch
+        {
+            return "(unknown)";
+        }
+    }
+}

@@ -1,8 +1,182 @@
-﻿@page "/"
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 @attribute [AllowAnonymous]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Diagrammatic</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="home-hero">
+    <div class="home-hero-inner">
+        <span class="home-eyebrow">For universities</span>
+        <h1 class="home-title">Teach and assess <span class="home-title-accent">diagram-based</span> exercises with clarity.</h1>
+        <p class="home-lead">
+            Diagrammatic helps professors author exercises and exams, and gives students
+            a focused, mobile-friendly space to solve and submit them.
+        </p>
 
-Welcome to your new app.
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="home-cta">
+                    <a class="btn btn-primary btn-lg" href="register">Get started</a>
+                    <a class="btn btn-secondary btn-lg" href="login">I already have an account</a>
+                </div>
+                <p class="home-cta-sub">
+                    Student? <a href="register-student">Create a student account</a>.
+                </p>
+            </NotAuthorized>
+            <Authorized>
+                <div class="home-cta">
+                    <AuthorizeView Roles="Teacher" Context="teacherContext">
+                        <Authorized>
+                            <a class="btn btn-primary btn-lg" href="create-exam">Create an exam</a>
+                            <a class="btn btn-secondary btn-lg" href="student-submissions">View submissions</a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Roles="Student" Context="studentContext">
+                        <Authorized>
+                            <a class="btn btn-primary btn-lg" href="diagram-evaluation">Go to my exercises</a>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</section>
+
+<section class="home-feature-grid">
+    <article class="home-feature">
+        <div class="home-feature-icon home-feature-icon--accent">
+            <span class="bi bi-pencil-square"></span>
+        </div>
+        <h3>Author once, assess often</h3>
+        <p>Build collections of diagram and path exercises, then assemble them into exams in seconds.</p>
+    </article>
+    <article class="home-feature">
+        <div class="home-feature-icon home-feature-icon--success">
+            <span class="bi bi-phone"></span>
+        </div>
+        <h3>Designed for students on phones</h3>
+        <p>The student workspace is responsive — exam-takers can work just as comfortably on a phone as on a laptop.</p>
+    </article>
+    <article class="home-feature">
+        <div class="home-feature-icon home-feature-icon--info">
+            <span class="bi bi-graph-up"></span>
+        </div>
+        <h3>See results immediately</h3>
+        <p>Automatic evaluation means feedback the moment a student submits — and clean dashboards for teachers.</p>
+    </article>
+</section>
+
+<style>
+    .home-hero {
+        position: relative;
+        padding: var(--ds-space-12) 0 var(--ds-space-10);
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .home-hero-inner {
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
+    .home-eyebrow {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--ds-radius-full);
+        background-color: var(--ds-accent-soft);
+        color: var(--ds-accent);
+        font-size: var(--ds-text-xs);
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: var(--ds-space-5);
+    }
+
+    .home-title {
+        font-size: clamp(2rem, 5vw, 3.25rem);
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        margin-bottom: var(--ds-space-5);
+    }
+
+    .home-title-accent {
+        background: linear-gradient(135deg, var(--ds-accent), #7c3aed);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .home-lead {
+        font-size: var(--ds-text-lg);
+        color: var(--ds-text-muted);
+        margin-bottom: var(--ds-space-8);
+    }
+
+    .home-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--ds-space-3);
+        justify-content: center;
+        margin-bottom: var(--ds-space-4);
+    }
+
+    .home-cta .btn { min-width: 200px; }
+
+    .home-cta-sub {
+        color: var(--ds-text-muted);
+        font-size: var(--ds-text-sm);
+        margin: 0;
+    }
+
+    .home-feature-grid {
+        display: grid;
+        gap: var(--ds-space-5);
+        grid-template-columns: 1fr;
+        padding-top: var(--ds-space-4);
+    }
+
+    @@media (min-width: 768px) {
+        .home-feature-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .home-feature {
+        background-color: var(--ds-surface);
+        border: 1px solid var(--ds-border);
+        border-radius: var(--ds-radius-lg);
+        padding: var(--ds-space-6);
+        box-shadow: var(--ds-shadow-sm);
+        transition: transform var(--ds-duration-base) var(--ds-ease),
+                    box-shadow var(--ds-duration-base) var(--ds-ease);
+    }
+
+    .home-feature:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--ds-shadow-md);
+    }
+
+    .home-feature h3 {
+        font-size: var(--ds-text-lg);
+        margin-bottom: var(--ds-space-2);
+    }
+
+    .home-feature p {
+        color: var(--ds-text-muted);
+        font-size: var(--ds-text-sm);
+        margin: 0;
+    }
+
+    .home-feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--ds-radius-md);
+        margin-bottom: var(--ds-space-4);
+        font-size: 1.25rem;
+    }
+
+    .home-feature-icon--accent { background-color: var(--ds-accent-soft); color: var(--ds-accent); }
+    .home-feature-icon--success { background-color: var(--ds-success-soft); color: var(--ds-success); }
+    .home-feature-icon--info { background-color: var(--ds-info-soft); color: var(--ds-info); }
+</style>

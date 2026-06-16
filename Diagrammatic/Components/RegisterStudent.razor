@@ -1,4 +1,4 @@
-﻿@page "/register-student"
+@page "/register-student"
 @using Diagrammatic2.Components.Shared.Requests
 @using Diagrammatic2.Components.Shared.Responses
 @inject IHttpClientFactory HttpClientFactory
@@ -6,44 +6,60 @@
 @inject IToastService toastService
 @attribute [AllowAnonymous]
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 card shadow-sm p-4">
-            <EditForm Model="registrationModel" OnValidSubmit="RegisterUser">
-                <DataAnnotationsValidator />
-                <h2 class="text-center">Create Student Account</h2>
-                <p class="text-muted text-center">Join the evaluation session</p>
-                <hr />
+<PageTitle>Create student account · Diagrammatic</PageTitle>
 
-                <div class="form-floating mb-3">
-                    <InputText id="email" @bind-Value="registrationModel.email" class="form-control" autocomplete="username" placeholder="name@example.com" />
-                    <label for="email">Email address</label>
-                    <ValidationMessage For="@(() => registrationModel.email)" class="text-danger" />
-                </div>
-
-                <div class="form-floating mb-3">
-                    <InputText id="password" type="password" @bind-Value="registrationModel.password" class="form-control" autocomplete="new-password" placeholder="password" />
-                    <label for="password">Password</label>
-                    <ValidationMessage For="@(() => registrationModel.password)" class="text-danger" />
-                </div>
-
-                @* Hidden role display for debugging or confirmation *@
-                <div class="mb-3 text-center">
-                    <span class="badge bg-secondary">Account Type: Student</span>
-                </div>
-
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-
-                <div class="mt-3 text-center">
-                    <a href="login">Already got an account? Log in here.</a>
-                </div>
-
-                @if (!string.IsNullOrEmpty(responseMessage))
-                {
-                    <div class="mt-3 alert alert-warning">@responseMessage</div>
-                }
-            </EditForm>
+<div class="ds-auth-shell">
+    <div class="ds-auth-card">
+        <div class="ds-auth-brand">
+            <span class="ds-auth-mark">D</span>
+            <span>Diagrammatic</span>
         </div>
+
+        <h1 class="ds-auth-title">Join as a student</h1>
+        <p class="ds-auth-subtitle">Create an account to take exams and track your scores.</p>
+
+        <EditForm Model="registrationModel" OnValidSubmit="RegisterUser">
+            <DataAnnotationsValidator />
+
+            <div class="form-floating mb-3">
+                <InputText id="email"
+                           @bind-Value="registrationModel.email"
+                           class="form-control"
+                           autocomplete="username"
+                           placeholder="name@example.com"
+                           inputmode="email" />
+                <label for="email">Email address</label>
+                <ValidationMessage For="@(() => registrationModel.email)" class="validation-message" />
+            </div>
+
+            <div class="form-floating mb-4">
+                <InputText id="password"
+                           type="password"
+                           @bind-Value="registrationModel.password"
+                           class="form-control"
+                           autocomplete="new-password"
+                           placeholder="password" />
+                <label for="password">Password</label>
+                <ValidationMessage For="@(() => registrationModel.password)" class="validation-message" />
+            </div>
+
+            <div class="text-center mb-4">
+                <span class="badge bg-secondary">
+                    <span class="bi bi-mortarboard me-1"></span> Student account
+                </span>
+            </div>
+
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Create account</button>
+
+            @if (!string.IsNullOrEmpty(responseMessage))
+            {
+                <div class="alert alert-warning mt-4">@responseMessage</div>
+            }
+        </EditForm>
+
+        <p class="ds-auth-footer">
+            Already have an account? <a href="login">Sign in</a>
+        </p>
     </div>
 </div>
 
@@ -53,8 +69,6 @@
 
     protected override void OnInitialized()
     {
-        // Set the role to Student automatically
-        // Assuming your Request model uses lowercase 'role' or uppercase 'Role'
         registrationModel.role = "Student";
     }
 
@@ -63,8 +77,6 @@
         try
         {
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-
-            // Ensure the role is set one last time before sending
             registrationModel.role = "Student";
 
             var response = await httpClient.PostAsJsonAsync("/identity/register", registrationModel);
@@ -90,7 +102,7 @@
                 toastService.ShowError(responseMessage);
             }
         }
-        catch (Exception ex)
+        catch
         {
             responseMessage = "An error occurred connecting to the server.";
             toastService.ShowError(responseMessage);

@@ -17,6 +17,7 @@ namespace Exercises.Core.Services
             propertyMappings.Add(new ExerciseDictionary());
             propertyMappings.Add(new ExerciseCollectionDictionary());
             propertyMappings.Add(new ExamDictionary());
+            propertyMappings.Add(new SubmissionDictionary());
         }
 
         public Dictionary<string, PropertyMappingValue> GetPropertyMapping<TResource>()

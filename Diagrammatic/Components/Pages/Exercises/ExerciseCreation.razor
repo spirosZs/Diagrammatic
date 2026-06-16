@@ -1,4 +1,4 @@
-﻿@page "/create-exercise"
+@page "/create-exercise"
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
 @using Diagrammatic_test.Components.Pages.Exercises.Dto
 @using Diagrammatic_test.Components.Pages.Exercises.Dto.Diagram
@@ -28,68 +28,17 @@
         <input class="form-control" @bind="_exercise.Name" />
     </div>
 
-    <!-- Category -->
+    <!-- Exercise Collection -->
     <div class="form-group">
-        <label>Category</label>
-        <select class="form-control" @bind="_exercise.Category">
-            <option value="">--- Select ---</option>
-            <option value="diagram">Diagram</option>
-            <option value="path">Path</option>
+        <label>Exercise Collection</label>
+        <select class="form-control" @bind="_exercise.ExerciseCollectionId">
+            <option value="">--- Select Collection ---</option>
+            @foreach (var collection in _exerciseCollections)
+            {
+                <option value="@collection.Id">@collection.Name</option>
+            }
         </select>
     </div>
-
-    <!-- Diagram selector for diagram exercises -->
-    @if (_exercise.Category == "diagram")
-    {
-        <div class="form-group mt-3">
-            <label>Select Diagram</label>
-            <InputSelect class="form-control"
-                         TValue="Guid?"
-                         @bind-Value="_exercise.DiagramId">
-                <option value="">--- Select Diagram ---</option>
-                @foreach (var diagram in _diagrams)
-                {
-                    <option value="@diagram.Id">@diagram.Name</option>
-                }
-            </InputSelect>
-        </div>
-    }
-
-    <!-- Path exercise UI -->
-    @if (_exercise.Category == "path")
-    {
-        <div class="mt-3">
-            <h5 class="mt-3">Paths Definition</h5>
-
-            <label>Exercise Summary</label>
-            <input class="form-control" @bind="_pathExercise.Code" />
-
-            <label class="mt-2">Select Diagram</label>
-            <InputSelect class="form-control"
-                         TValue="Guid?"
-                         @bind-Value="_pathExercise.DiagramId">
-                <option value="">--- Select Diagram ---</option>
-                @foreach (var diagram in _pathDiagrams)
-                {
-                    <option value="@diagram.Id">@diagram.Name</option>
-                }
-            </InputSelect>
-
-            <label>Paths</label>
-            <textarea class="form-control"
-                      rows="3"
-                      placeholder="1 2 3;3 2 1;4 5 6"
-                      @bind="_pathsInput">
-                </textarea>
-
-            <label class="mt-2">Credits</label>
-            <textarea class="form-control"
-                      rows="2"
-                      placeholder="33.33;33.33;33.33"
-                      @bind="_creditsInput">
-                </textarea>
-        </div>
-    }
 
     <!-- Weight -->
     <div class="form-group">
@@ -103,17 +52,51 @@
         <input type="number" class="form-control" @bind="_exercise.TimeToComplete" />
     </div>
 
-    <!-- Exercise Collection -->
+    <!-- Category -->
     <div class="form-group">
-        <label>Exercise Collection</label>
-        <select class="form-control" @bind="_exercise.ExerciseCollectionId">
-            <option value="">--- Select Collection ---</option>
-            @foreach (var collection in _exerciseCollections)
-            {
-                <option value="@collection.Id">@collection.Name</option>
-            }
+        <label>Category</label>
+        <select class="form-control" @bind="_exercise.Category">
+            <option value="">--- Select ---</option>
+            <option value="path">Path</option>
+            <option value="diagram">Diagram</option>
         </select>
     </div>
+
+    <!-- Path exercise fields -->
+    @if (_exercise.Category == "path")
+    {
+        <div class="form-group">
+            <label>URL</label>
+            <input class="form-control" @bind="_diagramUrl" />
+        </div>
+
+        <div class="form-group">
+            <label>Paths</label>
+            <textarea class="form-control"
+                      rows="3"
+                      placeholder="1 2 3;3 2 1;4 5 6"
+                      @bind="_pathsInput"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Credits</label>
+            <textarea class="form-control"
+                      rows="2"
+                      placeholder="33.33;33.33;33.33"
+                      @bind="_creditsInput"></textarea>
+        </div>
+    }
+
+    <!-- Diagram exercise fields -->
+    @if (_exercise.Category == "diagram")
+    {
+        <div class="form-group">
+            <label>Definition (pass the Diagram in .json format)</label>
+            <textarea class="form-control"
+                      rows="6"
+                      @bind="_definitionInput"></textarea>
+        </div>
+    }
 
     <br />
     <button type="submit" class="btn btn-primary">Create</button>
@@ -131,24 +114,13 @@
     private ExerciseCreateDto _exercise = new();
     private PathExerciseCreateDto _pathExercise = new();
 
+    private string _diagramUrl = string.Empty;
     private string _pathsInput = string.Empty;
     private string _creditsInput = string.Empty;
+    private string _definitionInput = string.Empty;
 
     private List<ExerciseCollectionDto> _exerciseCollections = new();
     private string? _errorMessage;
-
-    // TEMP diagrams for diagram exercises
-    private readonly List<(Guid Id, string Name)> _diagrams = new()
-    {
-        (Guid.Parse("67F8A883-ABDC-44AA-B923-2E741B6DA7A7"), "Askisi1"),
-        (Guid.Parse("1572881A-88E0-443D-90D6-91F1FC6E8CEC"), "Askisi2")
-    };
-
-    // TEMP diagrams for path exercises
-    private readonly List<(Guid Id, string Name)> _pathDiagrams = new()
-    {
-        (Guid.Parse("0A909782-173B-4EFF-B64F-260742FDC430"), "Path Askisi")
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -194,18 +166,24 @@
     {
         try
         {
+            if (_exercise.Category != "path" && _exercise.Category != "diagram")
+                throw new Exception("Please select a category.");
+
             var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            HttpResponseMessage response;
+            // Diagram payload for POST /api/diagram
+            var diagram = new DiagramCreateDto
+            {
+                Name = _exercise.Name,
+                Published = false
+            };
 
             if (_exercise.Category == "path")
             {
-                // Ensure diagram is selected
-                if (_pathExercise.DiagramId == null)
-                    throw new Exception("Please select a diagram for the path exercise.");
+                diagram.Url = _diagramUrl;
 
                 // Parse paths
                 var paths = _pathsInput
@@ -229,24 +207,42 @@
                         Credits = credits[i]
                     })
                     .ToList();
+            }
+            else
+            {
+                diagram.Definition = _definitionInput;
+            }
 
-                // Copy base fields
+            // 1. Create the diagram
+            var diagramResponse = await httpClient.PostAsJsonAsync("/api/diagram", diagram);
+
+            if (!diagramResponse.IsSuccessStatusCode)
+                throw new Exception(await diagramResponse.Content.ReadAsStringAsync());
+
+            var createdDiagram = Newtonsoft.Json.JsonConvert.DeserializeObject<DiagramDto>(
+                await diagramResponse.Content.ReadAsStringAsync())!;
+
+            // 2. Create the exercise linked to the new diagram
+            HttpResponseMessage response;
+
+            if (_exercise.Category == "path")
+            {
                 _pathExercise.Name = _exercise.Name;
-                _pathExercise.Category = "path";
+                _pathExercise.Category = _exercise.Category;
                 _pathExercise.ProblemType = "path";
                 _pathExercise.Weight = _exercise.Weight;
                 _pathExercise.TimeToComplete = _exercise.TimeToComplete;
                 _pathExercise.ExerciseCollectionId = _exercise.ExerciseCollectionId;
                 _pathExercise.Published = false;
+                _pathExercise.DiagramId = createdDiagram.Id;
 
-                Console.WriteLine("DiagramId= " + _pathExercise.DiagramId);
                 response = await httpClient.PostAsJsonAsync("/api/exercise", _pathExercise);
             }
             else
             {
-                _exercise.Category = "diagram";
                 _exercise.ProblemType = "diagram";
                 _exercise.Published = false;
+                _exercise.DiagramId = createdDiagram.Id;
 
                 response = await httpClient.PostAsJsonAsync("/api/exercise", _exercise);
             }
@@ -256,8 +252,10 @@
                 toastService.ShowSuccess("Exercise created successfully!");
                 _exercise = new ExerciseCreateDto();
                 _pathExercise = new PathExerciseCreateDto();
+                _diagramUrl = string.Empty;
                 _pathsInput = string.Empty;
                 _creditsInput = string.Empty;
+                _definitionInput = string.Empty;
             }
             else
             {

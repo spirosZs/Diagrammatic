@@ -1,82 +1,134 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Diagrammatic_test</a>
+<header class="ds-navbar">
+    <div class="ds-navbar-inner">
+        <NavLink class="ds-brand" href="" Match="NavLinkMatch.All" @onclick="CloseMobile" title="Diagrammatic">
+            <span class="ds-brand-mark" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="8" cy="2.5" r="2" fill="white"/>
+                    <circle cx="2.5" cy="13.5" r="2" fill="white"/>
+                    <circle cx="13.5" cy="13.5" r="2" fill="white"/>
+                    <line x1="8" y1="4.5" x2="2.5" y2="11.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="8" y1="4.5" x2="13.5" y2="11.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="4.5" y1="13.5" x2="11.5" y2="13.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </span>
+        </NavLink>
+
+        <button class="ds-menu-toggle"
+                type="button"
+                aria-label="Open menu"
+                aria-expanded="@_mobileOpen.ToString().ToLower()"
+                @onclick="ToggleMobile">
+            <span class="bi @(_mobileOpen ? "bi-x-lg" : "bi-list")"></span>
+        </button>
+
+        <nav class="ds-nav @(_mobileOpen ? "is-open" : "")" aria-label="Primary">
+            <ul class="ds-nav-list">
+                <CascadingAuthenticationState>
+                    <AuthorizeView>
+                        <Authorized>
+                            <li>
+                                <NavLink class="ds-nav-link" href="" Match="NavLinkMatch.All" @onclick="CloseMobile">
+                                    <span class="bi bi-house-door"></span>
+                                    <span>Home</span>
+                                </NavLink>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <AuthorizeView Roles="Teacher">
+                        <Authorized>
+                            <li>
+                                <NavLink class="ds-nav-link" href="create-exercise" @onclick="CloseMobile">
+                                    <span class="bi bi-file-earmark-text"></span>
+                                    <span>Exercises</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="ds-nav-link" href="create-exerciseCollection" @onclick="CloseMobile">
+                                    <span class="bi bi-folder-plus"></span>
+                                    <span>New Collection</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="ds-nav-link" href="create-exam" @onclick="CloseMobile">
+                                    <span class="bi bi-pencil-square"></span>
+                                    <span>Exams</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="ds-nav-link" href="start-game" @onclick="CloseMobile">
+                                    <span class="bi bi-play-circle"></span>
+                                    <span>Start Game</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="ds-nav-link" href="student-submissions" @onclick="CloseMobile">
+                                    <span class="bi bi-clipboard-data"></span>
+                                    <span>Submissions</span>
+                                </NavLink>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <AuthorizeView Roles="Student">
+                        <Authorized>
+                            <li>
+                                <NavLink class="ds-nav-link" href="diagram-evaluation" @onclick="CloseMobile">
+                                    <span class="bi bi-diagram-3"></span>
+                                    <span>My Exercises</span>
+                                </NavLink>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
+                </CascadingAuthenticationState>
+            </ul>
+
+            <div class="ds-nav-actions">
+                <CascadingAuthenticationState>
+                    <AuthorizeView>
+                        <NotAuthorized>
+                            <a class="btn btn-ghost btn-sm" href="login" @onclick="CloseMobile">Log in</a>
+                            <a class="btn btn-primary btn-sm" href="register" @onclick="CloseMobile">Sign up</a>
+                        </NotAuthorized>
+                        <Authorized>
+                            <span class="ds-user-chip">
+                                <span class="bi bi-person-circle"></span>
+                                <span class="ds-user-name">@context.User.Identity?.Name</span>
+                            </span>
+                            <button type="button" class="btn btn-ghost btn-sm" @onclick="HandleLogout">
+                                <span class="bi bi-box-arrow-right me-1"></span> Log out
+                            </button>
+                        </Authorized>
+                    </AuthorizeView>
+                </CascadingAuthenticationState>
+            </div>
+        </nav>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    @if (_mobileOpen)
+    {
+        <div class="ds-nav-backdrop" @onclick="CloseMobile"></div>
+    }
+</header>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
+@code {
+    [Parameter] public EventCallback OnLogout { get; set; }
 
-        <!-- Always visible links -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+    private bool _mobileOpen;
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+    private void ToggleMobile() => _mobileOpen = !_mobileOpen;
 
-        <!-- Authorized links -->
-        <CascadingAuthenticationState>
-            <AuthorizeView Roles="Teacher">
-                <Authorized>
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="weather">
-                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-                        </NavLink>
-                    </div>
+    private void CloseMobile() => _mobileOpen = false;
 
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="create-exercise">
-                            <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Exercises
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="add-exercise-to-collection">
-                            <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Exercise to Collection
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="create-exerciseCollection">
-                            <span class="bi bi-folder" aria-hidden="true"></span> Exercise Collection
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="create-exam">
-                            <span class="bi bi-folder" aria-hidden="true"></span> Exam Creation
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="start-game">
-                            <span class="bi bi-folder" aria-hidden="true"></span> Start Game
-                        </NavLink>
-                    </div>
-
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="delete-exercise">
-                            <span class="bi bi-folder" aria-hidden="true"></span> Delete Exercise
-                        </NavLink>
-                    </div>
-                </Authorized>
-
-                <NotAuthorized>
-                    <!-- Optional: links only visible to non-authenticated users -->
-                </NotAuthorized>
-            </AuthorizeView>
-        </CascadingAuthenticationState>
-
-    </nav>
-</div>
+    private async Task HandleLogout()
+    {
+        CloseMobile();
+        if (OnLogout.HasDelegate)
+        {
+            await OnLogout.InvokeAsync();
+        }
+    }
+}
