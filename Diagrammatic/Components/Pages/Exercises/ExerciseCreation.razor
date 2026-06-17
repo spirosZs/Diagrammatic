@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
+@using System.Text.Json
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
@@ -91,10 +92,17 @@
     @if (_exercise.Category == "diagram")
     {
         <div class="form-group">
-            <label>Definition (pass the Diagram in .json format)</label>
-            <textarea class="form-control"
-                      rows="6"
-                      @bind="_definitionInput"></textarea>
+            <label>Diagram (upload the Diagram in .json format)</label>
+            <InputFile OnChange="UploadDiagramFile" accept=".json" />
+            @if (!string.IsNullOrEmpty(_definitionInput))
+            {
+                <div class="text-success mt-1">Diagram loaded.</div>
+            }
+        </div>
+
+        <div class="form-group">
+            <label>Definition</label>
+            <input class="form-control" @bind="_diagramUrl" />
         </div>
     }
 
@@ -210,6 +218,7 @@
             }
             else
             {
+                diagram.Url = _diagramUrl;
                 diagram.Definition = _definitionInput;
             }
 
@@ -266,5 +275,108 @@
         {
             _errorMessage = ex.Message;
         }
+    }
+
+    private async Task UploadDiagramFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(long.MaxValue));
+            var inputJson = await reader.ReadToEndAsync();
+
+            // Filter the uploaded diagram exactly the same way DiagramEvaluation.razor
+            // does, and store the normalized DiagramDefinitionDto so the evaluation page
+            // can consume it directly.
+            var definition = ExtractDiagramDefinitionFromUpload(inputJson);
+            _definitionInput = JsonSerializer.Serialize(definition);
+
+            toastService.ShowSuccess("Diagram loaded.");
+        }
+        catch (Exception ex)
+        {
+            _definitionInput = string.Empty;
+            toastService.ShowError($"Failed to read diagram: {ex.Message}");
+        }
+    }
+
+    // Identical to DiagramEvaluation.razor's ExtractDiagramDefinitionFromUpload so both
+    // pages normalize uploaded diagrams the exact same way.
+    private DiagramDefinitionDto ExtractDiagramDefinitionFromUpload(string rawJson)
+    {
+        if (rawJson.TrimStart().StartsWith("\""))
+        {
+            rawJson = JsonSerializer.Deserialize<string>(rawJson)!;
+        }
+
+        using var doc = JsonDocument.Parse(rawJson);
+        var root = doc.RootElement;
+
+        var nodes = new List<NodeDefinitionDto>();
+        var connectors = new List<ConnectorDefinitionDto>();
+        var map = new Dictionary<string, NodeDefinitionDto>();
+
+        if (root.TryGetProperty("nodes", out var nodesElement))
+        {
+            foreach (var n in nodesElement.EnumerateArray())
+            {
+                var id = n.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
+
+                string content = "";
+
+                if (n.TryGetProperty("annotations", out var annos))
+                {
+                    var firstAnno = annos.EnumerateArray().FirstOrDefault();
+
+                    if (firstAnno.ValueKind != JsonValueKind.Undefined &&
+                        firstAnno.TryGetProperty("content", out var contentProp))
+                    {
+                        content = contentProp.GetString() ?? "";
+                    }
+                }
+
+                var node = new NodeDefinitionDto
+                {
+                    Id = id,
+                    Annotations =
+                    {
+                        new NodeAnnotationDto
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Content = content
+                        }
+                    }
+                };
+
+                nodes.Add(node);
+                map[id] = node;
+            }
+        }
+
+        if (root.TryGetProperty("connectors", out var connElement))
+        {
+            foreach (var c in connElement.EnumerateArray())
+            {
+                var id = c.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
+                var sourceId = c.GetProperty("sourceID").GetString();
+                var targetId = c.GetProperty("targetID").GetString();
+
+                if (sourceId != null && targetId != null)
+                {
+                    if (map.TryGetValue(sourceId, out var sourceNode))
+                        sourceNode.OutEdges.Add(id);
+
+                    if (map.TryGetValue(targetId, out var targetNode))
+                        targetNode.InEdges.Add(id);
+                }
+
+                connectors.Add(new ConnectorDefinitionDto { Id = id });
+            }
+        }
+
+        return new DiagramDefinitionDto
+        {
+            Nodes = nodes,
+            Connectors = connectors
+        };
     }
 }

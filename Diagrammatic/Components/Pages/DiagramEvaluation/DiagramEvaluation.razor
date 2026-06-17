@@ -414,7 +414,10 @@ else
 
             var payload = new DiagramCompareRequestDto
             {
-                Correct = ExtractDiagramDefinitionFromUpload(exercise.Diagram.Definition),
+                // The stored definition is already normalized at creation time
+                // (ExerciseCreation uses the same ExtractDiagramDefinitionFromUpload),
+                // so deserialize it directly rather than re-extracting it.
+                Correct = ParseStoredDefinition(exercise.Diagram.Definition),
                 Input = ExtractDiagramDefinitionFromUpload(inputJson)
             };
 
@@ -529,6 +532,20 @@ else
                 Id = c.Id
             }).ToList()
         };
+    }
+
+    // Reads a definition that was already normalized at creation time
+    // (ExerciseCreation stores a serialized DiagramDefinitionDto).
+    private DiagramDefinitionDto ParseStoredDefinition(string rawJson)
+    {
+        if (rawJson.TrimStart().StartsWith("\""))
+        {
+            rawJson = JsonSerializer.Deserialize<string>(rawJson)!;
+        }
+
+        return JsonSerializer.Deserialize<DiagramDefinitionDto>(
+            rawJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     }
 
     private DiagramDefinitionDto ExtractDiagramDefinitionFromUpload(string rawJson)
