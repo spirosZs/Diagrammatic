@@ -88,18 +88,26 @@ namespace Exercises.Core.Services
 
         public async Task<bool> Participate(Exam exam, Guid userId, CancellationToken token = default)
         {
-            var participation = new ExamParticipation
+            // Avoid duplicate participations. The exam is loaded together with its
+            // Participations, so re-joining (page refresh / re-entering the code) would
+            // otherwise try to track a second ExamParticipation with the same
+            // {ExamId, UserId} key and throw an InvalidOperationException.
+            var alreadyJoined = exam.Participations.Any(p => p.UserId == userId);
+            if (!alreadyJoined)
             {
-                ExamId = exam.Id,
-                UserId = userId
-            };
-            exam.Participations.Add(participation);
-            await _context.SaveChangesAsync(token);
-            await _hubContext.NotifyAllEvent(GameEventType.ParticipantEntered, new
-            {
-                examId = exam.Id,
-                userId
-            });
+                exam.Participations.Add(new ExamParticipation
+                {
+                    ExamId = exam.Id,
+                    UserId = userId
+                });
+                await _context.SaveChangesAsync(token);
+                await _hubContext.NotifyAllEvent(GameEventType.ParticipantEntered, new
+                {
+                    examId = exam.Id,
+                    userId
+                });
+            }
+
             return true;
         }
 

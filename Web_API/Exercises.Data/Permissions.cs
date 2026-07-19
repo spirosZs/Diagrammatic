@@ -24,9 +24,11 @@ namespace Exercises.Data
                 return AccessResultType.Allowed;
             }
 
-            var entityPermissions = PermissionsDictionary[typeof(TEntity)];
-
-            if (entityPermissions == null)
+            // Entity types without an explicit permissions entry (e.g. Diagram) fall back to
+            // Neutral, which the view hooks treat as permissive. Using the indexer here would
+            // throw KeyNotFoundException and surface as a 500.
+            if (!PermissionsDictionary.TryGetValue(typeof(TEntity), out var entityPermissions)
+                || entityPermissions == null)
             {
                 return AccessResultType.Neutral;
             }
