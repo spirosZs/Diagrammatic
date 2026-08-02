@@ -1,0 +1,576 @@
+/* =========================================================
+   Diagram evaluation — student view
+   Mobile-first: the embedded editor gets as much of the
+   viewport as possible, and can take all of it (.is-expanded).
+   ========================================================= */
+
+.eval-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-5);
+}
+
+/* ---------- Page header ---------- */
+.eval-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+}
+
+.eval-head-text {
+    min-width: 0;
+}
+
+.eval-title {
+    font-size: clamp(1.375rem, 4.5vw, var(--ds-text-3xl));
+    font-weight: 700;
+    letter-spacing: var(--ds-tracking-tight);
+    margin: 0;
+}
+
+.eval-subtitle {
+    margin: var(--ds-space-1) 0 0;
+    color: var(--ds-text-subtle);
+    font-size: var(--ds-text-sm);
+    line-height: var(--ds-leading-snug);
+}
+
+.eval-live {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--ds-radius-full);
+    background: var(--ds-success-soft);
+    color: #15803d;
+    font-size: var(--ds-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.eval-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--ds-radius-full);
+    background: var(--ds-success);
+    animation: eval-blink 1.6s var(--ds-ease) infinite;
+}
+
+@keyframes eval-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+/* ---------- Cards ---------- */
+.eval-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-sm);
+    padding: var(--ds-space-5);
+}
+
+.eval-card--narrow {
+    width: 100%;
+    max-width: 420px;
+    margin-inline: auto;
+}
+
+.eval-card--center {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.eval-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ds-space-4);
+    margin-bottom: var(--ds-space-5);
+}
+
+.eval-card-title {
+    font-size: var(--ds-text-xl);
+    font-weight: 600;
+    margin: 0;
+}
+
+.eval-card-text {
+    margin: var(--ds-space-2) 0 0;
+    color: var(--ds-text-muted);
+    font-size: var(--ds-text-sm);
+    line-height: var(--ds-leading-normal);
+}
+
+.eval-badge {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-md);
+    font-size: 1.35rem;
+}
+
+.eval-card--center .eval-badge {
+    margin-bottom: var(--ds-space-4);
+}
+
+.eval-badge--accent {
+    background: var(--ds-accent-soft);
+    color: var(--ds-accent);
+}
+
+.eval-badge--success {
+    background: var(--ds-success-soft);
+    color: var(--ds-success);
+}
+
+/* Waiting indicator — calmer than a spinner, cheap to animate. */
+.eval-pulse {
+    width: 64px;
+    height: 64px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--ds-space-4);
+    border-radius: var(--ds-radius-full);
+    background: var(--ds-accent-soft);
+    color: var(--ds-accent);
+    font-size: 1.6rem;
+    animation: eval-pulse 2s var(--ds-ease) infinite;
+}
+
+.eval-pulse--warn {
+    background: var(--ds-warning-soft);
+    color: var(--ds-warning);
+}
+
+@keyframes eval-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.28); }
+    70% { box-shadow: 0 0 0 16px rgba(79, 70, 229, 0); }
+}
+
+/* ---------- Join form ---------- */
+.eval-code-input {
+    /* 16px minimum keeps iOS Safari from zooming the page on focus. */
+    font-size: 1.125rem;
+    text-align: center;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    padding-block: 0.75rem;
+    margin-bottom: var(--ds-space-3);
+}
+
+.eval-btn-block {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-2);
+    min-height: 44px;
+}
+
+.eval-error {
+    margin: var(--ds-space-3) 0 0;
+    color: var(--ds-danger);
+    font-size: var(--ds-text-sm);
+}
+
+/* ---------- Review & submit ---------- */
+.eval-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+}
+
+.eval-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-4);
+    padding: var(--ds-space-4);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface-alt);
+}
+
+.eval-item-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.eval-item-name {
+    display: block;
+    font-weight: 600;
+    color: var(--ds-text);
+    overflow-wrap: anywhere;
+}
+
+.eval-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+    margin-top: var(--ds-space-2);
+}
+
+.eval-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--ds-radius-full);
+    font-size: var(--ds-text-xs);
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.eval-chip--ok {
+    background: var(--ds-success-soft);
+    color: #15803d;
+}
+
+.eval-chip--warn {
+    background: var(--ds-warning-soft);
+    color: #b45309;
+}
+
+.eval-chip--info {
+    background: var(--ds-info-soft);
+    color: #0369a1;
+}
+
+.eval-upload {
+    margin-top: var(--ds-space-3);
+}
+
+.eval-upload-label {
+    display: block;
+    font-size: var(--ds-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ds-text-subtle);
+    margin-bottom: var(--ds-space-2);
+}
+
+.eval-score {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 62px;
+    padding: var(--ds-space-2);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+}
+
+.eval-score-value {
+    font-size: var(--ds-text-2xl);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ds-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.eval-score-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ds-text-subtle);
+    margin-top: 2px;
+}
+
+.eval-actions {
+    margin-top: var(--ds-space-5);
+}
+
+/* ---------- Live round: stage ---------- */
+.eval-stage {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-sm);
+    overflow: hidden;
+}
+
+.eval-stage-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    background: var(--ds-surface);
+}
+
+.eval-stage-bar--plain {
+    padding-inline: 0;
+    padding-top: 0;
+}
+
+.eval-stage-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 600;
+    font-size: var(--ds-text-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.eval-timer {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--ds-radius-full);
+    font-weight: 700;
+    font-size: var(--ds-text-base);
+    font-variant-numeric: tabular-nums;
+    transition: background-color var(--ds-duration-base) var(--ds-ease),
+                color var(--ds-duration-base) var(--ds-ease);
+}
+
+.eval-timer.is-normal {
+    background: var(--ds-accent-soft);
+    color: var(--ds-accent);
+}
+
+.eval-timer.is-warning {
+    background: var(--ds-warning-soft);
+    color: #b45309;
+}
+
+.eval-timer.is-critical {
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
+    animation: eval-throb 1s var(--ds-ease) infinite;
+}
+
+@keyframes eval-throb {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+.eval-timer-value {
+    letter-spacing: 0.02em;
+}
+
+.eval-icon-btn {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    color: var(--ds-text-muted);
+    cursor: pointer;
+    transition: background-color var(--ds-duration-fast) var(--ds-ease),
+                color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.eval-icon-btn:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+}
+
+.eval-icon-btn:active {
+    transform: scale(0.94);
+}
+
+.eval-progress {
+    height: 4px;
+    background: var(--ds-surface-alt);
+    overflow: hidden;
+}
+
+.eval-progress-bar {
+    height: 100%;
+    background: var(--ds-accent);
+    transition: width 1s linear, background-color var(--ds-duration-base) var(--ds-ease);
+}
+
+.eval-progress-bar.is-warning { background: var(--ds-warning); }
+.eval-progress-bar.is-critical { background: var(--ds-danger); }
+
+/* Inside a padded card (path exercises) it reads as a bar, not a page edge. */
+.eval-card > .eval-progress {
+    border-radius: var(--ds-radius-full);
+    margin-bottom: var(--ds-space-4);
+}
+
+.eval-brief {
+    border-bottom: 1px solid var(--ds-border);
+    background: var(--ds-surface-alt);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    font-size: var(--ds-text-sm);
+}
+
+.eval-brief > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.eval-brief > summary::-webkit-details-marker {
+    display: none;
+}
+
+.eval-brief > summary::before {
+    content: "▸";
+    transition: transform var(--ds-duration-fast) var(--ds-ease);
+}
+
+.eval-brief[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.eval-brief > p {
+    margin: var(--ds-space-2) 0 0;
+    color: var(--ds-text-muted);
+    max-height: 30vh;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+/* The editor itself. Height is driven here (not by an iframe attribute) so it
+   can follow the viewport instead of a hard-coded 600px. */
+.eval-frame {
+    position: relative;
+    height: 60vh;
+    min-height: 320px;
+    max-height: 780px;
+    background: var(--ds-surface-alt);
+}
+
+.eval-frame iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* ---------- Expanded (viewport-filling) stage ---------- */
+.eval-stage.is-expanded {
+    position: fixed;
+    inset: 0;
+    /* Above the nav (60) but below Blazored toasts (999), so the countdown
+       warnings still reach the student in full screen. */
+    z-index: 900;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    height: 100vh;
+    height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior: contain;
+}
+
+.eval-stage.is-expanded .eval-frame {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+}
+
+.eval-stage.is-expanded .eval-brief {
+    max-height: 22vh;
+    overflow-y: auto;
+}
+
+/* ---------- Path exercises ---------- */
+.eval-lead {
+    font-size: var(--ds-text-lg);
+    color: var(--ds-text-muted);
+    line-height: var(--ds-leading-normal);
+}
+
+.eval-figure {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    object-fit: contain;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface-alt);
+    margin-bottom: var(--ds-space-4);
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 640px) {
+    .eval-page {
+        gap: var(--ds-space-4);
+    }
+
+    .eval-card {
+        padding: var(--ds-space-4);
+    }
+
+    .eval-card-head {
+        flex-direction: column;
+        gap: var(--ds-space-3);
+        margin-bottom: var(--ds-space-4);
+    }
+
+    /* Full-bleed stage: cancel the layout's 1rem side padding so the canvas
+       gets the whole screen width. */
+    .eval-stage {
+        margin-inline: calc(-1 * var(--ds-space-4));
+        border-inline: 0;
+        border-radius: 0;
+    }
+
+    .eval-frame {
+        height: 64vh;
+        height: 64dvh;
+        min-height: 300px;
+    }
+
+    .eval-stage-title {
+        font-size: var(--ds-text-sm);
+    }
+
+    .eval-item {
+        align-items: flex-start;
+    }
+
+    /* Keep the submit button reachable without scrolling a long list. */
+    .eval-actions {
+        position: sticky;
+        bottom: 0;
+        padding-top: var(--ds-space-3);
+        padding-bottom: calc(var(--ds-space-2) + env(safe-area-inset-bottom));
+        background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--ds-surface) 35%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .eval-live-dot,
+    .eval-pulse,
+    .eval-timer.is-critical {
+        animation: none;
+    }
+
+    .eval-progress-bar {
+        transition: none;
+    }
+}

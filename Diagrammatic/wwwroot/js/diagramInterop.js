@@ -1,63 +1,48 @@
-﻿window.diagramInterop = (function () {
-    let dotNetRef = null;
-    let iframeId = null;
-    let iframeReady = false;
+// Bridge to the Syncfusion diagram editor embedded as a cross-origin iframe
+// (Web_API /diagramEvaluation, message listener in newdiagram.js).
+window.diagramInterop = (function () {
 
-    function init(dotNetObject, targetIframeId) {
-        dotNetRef = dotNetObject;
-        iframeId = targetIframeId;
-
-        // Listen for messages from the iframe
-        window.addEventListener("message", onMessageFromIframe);
-
-        // Hook iframe load to know when it's ready
-        const frame = document.getElementById(iframeId);
-        if (frame) {
-            // If iframe already loaded, mark ready; otherwise wait for load event.
-            if (frame.contentWindow && frame.contentDocument.readyState !== 'complete') {
-                frame.addEventListener("load", () => {
-                    iframeReady = true;
-                }, { once: true });
-            } else {
-                iframeReady = true;
+    // Asks the iframe for its current diagram (Syncfusion saveDiagram() JSON).
+    // Resolves with the JSON string, or null if the iframe is missing or does
+    // not answer within timeoutMs — callers treat null as "capture failed".
+    function getDiagram(iframeId, timeoutMs) {
+        return new Promise(function (resolve) {
+            const frame = document.getElementById(iframeId);
+            if (!frame || !frame.contentWindow) {
+                resolve(null);
+                return;
             }
-        }
+
+            const timer = setTimeout(function () {
+                window.removeEventListener("message", onMessage);
+                resolve(null);
+            }, timeoutMs || 3000);
+
+            function onMessage(event) {
+                const data = event.data;
+                if (!data || data.action !== "diagramData") return;
+
+                clearTimeout(timer);
+                window.removeEventListener("message", onMessage);
+                resolve(typeof data.data === "string" ? data.data : null);
+            }
+
+            window.addEventListener("message", onMessage);
+
+            // targetOrigin "*": the editor's host/port differs per environment
+            // and the request carries no sensitive data.
+            frame.contentWindow.postMessage({ action: "saveDiagram" }, "*");
+        });
     }
 
-    function onMessageFromIframe(event) {
-        // Optional: check event.origin for security if you know the expected origin
-        const data = event.data;
-        if (!data) return;
-
-        if (data.action === "diagramData" && dotNetRef) {
-            // call into Blazor
-            dotNetRef.invokeMethodAsync("ReceiveDiagramData", data.data)
-                .catch(err => console.error("Error invoking ReceiveDiagramData:", err));
-        }
-    }
-
-    function requestDiagramData() {
+    // Wipes the editor canvas; used when a new round starts, because the
+    // iframe element survives re-renders and keeps the previous drawing.
+    function clearDiagram(iframeId) {
         const frame = document.getElementById(iframeId);
-        if (!frame || !frame.contentWindow) {
-            console.warn("diagramInterop: iframe not found or no contentWindow");
-            return false;
+        if (frame && frame.contentWindow) {
+            frame.contentWindow.postMessage({ action: "clearDiagram" }, "*");
         }
-
-        // If iframe not yet flagged ready, still attempt to postMessage — but return status
-        frame.contentWindow.postMessage({ action: "saveDiagram" }, "*");
-        return true;
     }
 
-    function dispose() {
-        window.removeEventListener("message", onMessageFromIframe);
-        dotNetRef = null;
-        iframeId = null;
-        iframeReady = false;
-    }
-
-    return {
-        init,
-        requestDiagramData,
-        dispose
-    };
+    return { getDiagram, clearDiagram };
 })();

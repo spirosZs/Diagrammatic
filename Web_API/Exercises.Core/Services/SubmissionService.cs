@@ -6,6 +6,7 @@ using Exercises.Core.Abstractions;
 using Exercises.Data;
 using Exercises.Data.DbContext;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace Exercises.Core.Services
 {
@@ -25,6 +26,18 @@ namespace Exercises.Core.Services
             _problemPluginManager = problemPluginManager;
         }
 
+        protected override void OnGetSingle(ref IQueryable<Submission> query)
+        {
+            base.OnGetSingle(ref query);
+            query = query.Include(s => s.User);
+        }
+
+        protected override void OnGet(SubmissionFilter filter, ref IQueryable<Submission> query)
+        {
+            base.OnGet(filter, ref query);
+            query = query.Include(s => s.User);
+        }
+
         protected override void OnBeforeCreate(Submission submission)
         {
             base.OnBeforeCreate(submission);
@@ -35,7 +48,9 @@ namespace Exercises.Core.Services
                 throw new Exception("Exam not found.");
             }
 
-            var exercise = _context.Exercises.FirstOrDefault(e => e.Id == submission.ExerciseId);
+            var exercise = _context.Exercises
+                .Include(e => (e as DiagramExercise).Diagram)
+                .FirstOrDefault(e => e.Id == submission.ExerciseId);
             if (exercise == null)
             {
                 throw new Exception("Exercise not found.");

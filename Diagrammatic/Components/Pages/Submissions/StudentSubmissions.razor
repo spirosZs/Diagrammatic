@@ -14,7 +14,7 @@
         <label for="studentName" class="form-label">Student Name</label>
         <div class="input-group">
             <span class="input-group-text">Submission for</span>
-            <input id="studentName" class="form-control" @bind="_studentName" placeholder="Enter student name" />
+            <input id="studentName" class="form-control" @bind="_studentName" placeholder="Enter Exercise Name" />
             <button class="btn btn-primary" type="button" @onclick="SearchAsync" disabled="@_isLoading">
                 @(_isLoading ? "Searching..." : "Search")
             </button>
@@ -35,6 +35,7 @@ else if (_rows.Count > 0)
     <table class="table table-striped">
         <thead>
             <tr>
+                <th>Student</th>
                 <th>Exercise Name</th>
                 <th>Score</th>
                 <th>Date</th>
@@ -44,6 +45,7 @@ else if (_rows.Count > 0)
             @foreach (var row in _rows)
             {
                 <tr>
+                    <td>@row.StudentName</td>
                     <td>@row.ExerciseName</td>
                     <td>@row.Score</td>
                     <td>@row.Date.ToString("yyyy-MM-dd HH:mm")</td>
@@ -109,6 +111,7 @@ else if (_rows.Count > 0)
                 var exerciseName = await GetExerciseNameAsync(httpClient, submission.ExerciseId);
                 _rows.Add(new SubmissionRowDto
                 {
+                    StudentName = submission.User?.UserName ?? "(unknown)",
                     ExerciseName = exerciseName,
                     Score = submission.Score,
                     Date = submission.Created

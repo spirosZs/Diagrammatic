@@ -102,7 +102,15 @@ namespace Exercises.Common.Diagram
             while (queue.Count > 0)
             {
                 var vertex = queue.Dequeue();
-                foreach (var neighbor in AdjacentList[vertex])
+
+                // Only edge sources are guaranteed to be keys in the adjacency
+                // list; a vertex reached as a neighbour may not be. Guard the
+                // lookup instead of indexing blindly so a malformed graph does
+                // not throw here.
+                if (!AdjacentList.TryGetValue(vertex, out var neighbours))
+                    continue;
+
+                foreach (var neighbor in neighbours)
                 {
                     if (previous.ContainsKey(neighbor))
                         continue;
@@ -118,7 +126,15 @@ namespace Exercises.Common.Diagram
                 while (!current.Equals(start))
                 {
                     path.Add(current);
-                    current = previous[current];
+
+                    // destination is not reachable from start (a disconnected
+                    // or malformed answer graph): return no path instead of
+                    // throwing KeyNotFoundException, so the caller can treat
+                    // this vertex as contributing no weight / no match.
+                    if (!previous.TryGetValue(current, out var prev))
+                        return Enumerable.Empty<int>();
+
+                    current = prev;
                 }
 
                 path.Add(start);
@@ -203,7 +219,11 @@ namespace Exercises.Common.Diagram
             }
             var sum = vertices.Sum(vertex => evaluation[vertex] * weights[vertex]);
             var weightSum = vertices.Sum(vertex => weights[vertex]);
-            return sum / weightSum;
+
+            // No comparable vertices carry any weight (e.g. an empty submission,
+            // or every vertex unreachable to the end node): score it as 0
+            // instead of dividing by zero.
+            return weightSum == 0 ? 0 : sum / weightSum;
         }
         
         private IDictionary<int, List<int>> CopyAdj(IDictionary<int, List<int>> neighbours)

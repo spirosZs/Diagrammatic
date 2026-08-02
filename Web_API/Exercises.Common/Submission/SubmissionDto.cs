@@ -1,4 +1,5 @@
 using System;
+using Exercises.Common.User;
 
 namespace Exercises.Common.Submission
 {
@@ -23,5 +24,10 @@ namespace Exercises.Common.Submission
         /// The score on this exercise.
         /// </summary>
         public int Score { get; set; }
+
+        /// <summary>
+        /// The user that made this submission.
+        /// </summary>
+        public UserDtoBase User { get; set; }
     }
 }

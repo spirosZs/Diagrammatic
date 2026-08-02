@@ -11,5 +11,7 @@ namespace Diagrammatic_test.Components.Pages.Submissions.Dto
         public object Data { get; set; }
 
         public int Score { get; set; }
+
+        public StudentDto User { get; set; }
     }
 }

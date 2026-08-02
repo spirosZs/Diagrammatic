@@ -1,106 +1,134 @@
-@section Styles {
-    <link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/material.css" />
-}
+@*
+    Diagram editor shell.
 
-@section Scripts {
-    <script src="https://cdn.syncfusion.com/ej2/dist/ej2.min.js"></script>
-    <script src="https://cdn.syncfusion.com/ej2/30.1.37/dist/ej2-diagrams.min.js"></script>
+    Laid out as a full-height app (toolbar + canvas + shape tray) instead of a
+    Bootstrap grid, so it fills whatever box embeds it — including a phone-sized
+    iframe. All sizing lives in newdiagram.css / newdiagram.js; nothing here is
+    hard-coded in pixels.
 
-    <script>
-        function diagramCreated() {
-            console.log("diagramCreated: fired");
-            var diagram = document.getElementById('diagram').ej2_instances[0];
-            console.log("diagram instance found:", !!diagram);
+    NOTE: @section blocks are not rendered from a partial, so this file must not
+    declare any — the scripts it needs are loaded by _LayoutBlank.cshtml and the
+    page that includes it (DiagramEvaluation.cshtml).
+*@
 
-            diagram.snapSettings = {
-                constraints: ej.diagrams.SnapConstraints.All,
-                snapAngle: 5,
-                horizontalGridlines: { lineColor: '#e0e0e0', lineIntervals: [10] },
-                verticalGridlines: { lineColor: '#e0e0e0', lineIntervals: [10] }
-            };
+<div class="dg-app">
 
-            diagram.connectorDefaults = function (connector) {
-                connector.sourceDecorator = { shape: 'None' };
-                connector.targetDecorator = { shape: 'Arrow' };
-                connector.style = { strokeWidth: 2 };
-                return connector;
-            };
+    <div class="dg-toolbar" role="toolbar" aria-label="Diagram tools">
 
-            diagram.collectionChange = function (args) {
-                if (args.state === 'Changed' && args.type === 'Addition' && args.element instanceof ej.diagrams.Connector) {
-                    console.log("Connector added:", args.element);
-                    diagram.tool = ej.diagrams.DiagramTools.Default;
-                    diagram.drawingObject = undefined;
-                }
-            };
+        <div class="dg-group">
+            <button type="button" id="MoveTool_Tool" class="dg-tool toolbarClick tools tools_select active"
+                    title="Select and move">
+                <i class="fas fa-mouse-pointer" aria-hidden="true"></i>
+                <span class="dg-label">Select</span>
+            </button>
 
-            function startDrawingConnector(segmentType) {
-                diagram.drawingObject = {
-                    type: 'Connector',
-                    segments: [{ type: segmentType }]
-                };
-                diagram.tool = ej.diagrams.DiagramTools.ContinuousDraw;
-            }
+            <button type="button" id="straight" class="dg-tool connectors tools tools_select"
+                    title="Draw a straight arrow">
+                <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 20 L16.5 7.5" />
+                    <path d="M20 4 L17.5 11.4 L12.6 6.5 Z" fill="currentColor" stroke="none" />
+                </svg>
+                <span class="dg-label">Arrow</span>
+            </button>
 
-            document.getElementById('straight').addEventListener('click', function () {
-                console.log("Straight connector tool activated");
-                startDrawingConnector('Straight');
-            });
+            <button type="button" id="cubic" class="dg-tool connectors tools tools_select"
+                    title="Draw a curved arrow">
+                <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 20 C 4 10, 9 4, 17 4" />
+                    <path d="M21 4 L16.5 6.6 L16.5 1.4 Z" fill="currentColor" stroke="none" />
+                </svg>
+                <span class="dg-label">Curve</span>
+            </button>
 
-            document.getElementById('cubic').addEventListener('click', function () {
-                console.log("Bezier connector tool activated");
-                startDrawingConnector('Bezier');
-            });
-        }
-
-
-    </script>
-}
-
-
-<div class="row">
-    <div class="col-lg-3 col-sm-3 control-section step1_2" id="palette-space" style="height:100%;">
-        <div class="row">
-            <ejs-symbolpalette id="symbolpalette" allowDrag="true" enableAnimation="false" getNodeDefaults="@ViewBag.getNodeDefaults" symbolHeight="80" symbolWidth="80" getSymbolInfo="@ViewBag.getSymbolInfo" palettes="@ViewBag.palettes">
-            </ejs-symbolpalette>
+            <button type="button" id="Pan_Tool" class="dg-tool toolbarClick tools tools_select"
+                    title="Pan the canvas">
+                <i class="fas fa-hand-paper" aria-hidden="true"></i>
+                <span class="dg-label">Pan</span>
+            </button>
         </div>
-        <div class="row" style="padding-top: 10px;font-family: 'Saira', sans-serif !important;">
-            <!-- <ejs-checkbox id="checked" checked="true" label="Continuous Draw" change="onChangeData"></ejs-checkbox> -->
+
+        <span class="dg-sep" aria-hidden="true"></span>
+
+        <div class="dg-group">
+            <button type="button" id="Undo_Tool" class="dg-tool toolbarClick tools" title="Undo">
+                <i class="fas fa-undo" aria-hidden="true"></i>
+            </button>
+            <button type="button" id="Redo_Tool" class="dg-tool toolbarClick tools" title="Redo">
+                <i class="fas fa-redo" aria-hidden="true"></i>
+            </button>
+            <button type="button" id="ZoomOut_Tool" class="dg-tool toolbarClick tools" title="Zoom out">
+                <i class="fas fa-search-minus" aria-hidden="true"></i>
+            </button>
+            <button type="button" id="ZoomIn_Tool" class="dg-tool toolbarClick tools" title="Zoom in">
+                <i class="fas fa-search-plus" aria-hidden="true"></i>
+            </button>
+            <button type="button" id="FitToPage_Tool" class="dg-tool toolbarClick tools" title="Fit to screen">
+                <i class="fas fa-expand-arrows-alt" aria-hidden="true"></i>
+            </button>
         </div>
-        <div class="row" style="padding-top: 10px">
-            <ejs-uploader id="fileupload" success="onUploadSuccess">
-                <e-uploader-asyncsettings saveUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Save" removeUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Remove">
-                </e-uploader-asyncsettings>
-            </ejs-uploader>
+
+        <span class="dg-sep" aria-hidden="true"></span>
+
+        <div class="dg-group">
+            <button type="button" id="DeleteSelection_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
+                    title="Delete what is selected">
+                <i class="far fa-trash-alt" aria-hidden="true"></i>
+                <span class="dg-label">Delete</span>
+            </button>
+            <button type="button" id="Delete_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
+                    title="Clear the whole canvas">
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+                <span class="dg-label">Clear</span>
+            </button>
         </div>
+
+        <span class="dg-spacer" aria-hidden="true"></span>
+
+        <div class="dg-group">
+            <button type="button" id="Upload_Tool" class="dg-tool toolbarClick tools" title="Open a saved diagram">
+                <i class="far fa-folder-open" aria-hidden="true"></i>
+                <span class="dg-label">Open</span>
+            </button>
+            <button type="button" id="Download_Tool" class="dg-tool toolbarClick tools" title="Save to a file">
+                <i class="fas fa-file-download" aria-hidden="true"></i>
+                <span class="dg-label">Save</span>
+            </button>
+        </div>
+
     </div>
-    <div class="col-lg-9 col-sm-9 control-section">
-        <div class="row step1_2">
-            <ul style="padding: 0px!important;width:100%">
-                <li class="customdropdown" style="border-right: 1px solid white;width:20%;">
-                    <a class="dropbtn">File  <i class="fas fa-caret-down" style="float:right;"></i></a>
-                    <div class="dropdown-content">
-                        <a class="toolbarClick" id="Upload_Tool"><i class="far fa-folder-open"></i> Open</a>
-                        <a class="toolbarClick" id="Download_Tool"><i class="fas fa-file-download"></i> Save</a>
-                    </div>
-                </li>
-                <li id="straight" class="connectors tools tools_select" style="width:10%;"><a class="btn-connector straight-connector">&nbsp;</a></li>
-                <li id="cubic" class="connectors tools tools_select" style="width:10%;"><a class="btn-connector cubic-connector">&nbsp;</a></li>
-                <li id="MoveTool_Tool" class="toolbarClick tools tools_select" style="width:10%;text-align: center;" title="Move"><a><i class="fas fa-mouse-pointer"></i></a></li>
-                <li id="Pan_Tool" class="toolbarClick tools tools_select" style="width:10%;text-align: center;" title="Pan"><a><i class="fas fa-hand-paper"></i></a></li>
-                <li id="Undo_Tool" class="toolbarClick tools" title="Undo" style="border-left: 1px solid white;width:10%;text-align: center;"><a><i class="fas fa-undo"></i></a></li>
-                <li id="Redo_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Redo"><a><i class="fas fa-redo"></i></a></li>
-                <li id="FitToPage_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Fit to Page"><a><i class="fas fa-expand-arrows-alt"></i></a></li>
-                <li id="Delete_Tool" class="toolbarClick tools" style="width:10%;text-align: center;" title="Delete"><a><i class="far fa-trash-alt"></i></a></li>
 
-            </ul>
-        </div>
-        <div class="row" style="padding: 0px!important;box-shadow: 1px 4px 5px 0px grey;">
-            <ejs-diagram created="diagramCreated" id="diagram" height="540px" drop="drop" childrenChanging="dragLeave" collectionChange="collectionChange">
+    <div class="dg-workspace">
+
+        <div class="dg-canvas" id="diagram-canvas">
+            <ejs-diagram created="diagramCreated" id="diagram" width="100%" height="100%"
+                         drop="drop" collectionChange="collectionChange">
                 <e-diagram-rulersettings showRulers="false" dynamicGrid="true"></e-diagram-rulersettings>
             </ejs-diagram>
         </div>
+
+        <div class="dg-palette" id="palette-space">
+            <div class="dg-palette-body">
+                <ejs-symbolpalette id="symbolpalette" allowDrag="true" enableAnimation="false"
+                                   getNodeDefaults="@ViewBag.getNodeDefaults" symbolHeight="72" symbolWidth="72"
+                                   getSymbolInfo="@ViewBag.getSymbolInfo" palettes="@ViewBag.palettes">
+                </ejs-symbolpalette>
+            </div>
+
+            <p class="dg-hint">
+                Drag a shape onto the canvas — or just tap it. Then pick
+                <strong>Arrow</strong> and drag from one shape to another to connect them.
+            </p>
+
+            @* Kept in the DOM (visually hidden) because the Open button clicks its
+               file input programmatically — display:none would break that. *@
+            <div class="dg-uploader">
+                <ejs-uploader id="fileupload" success="onUploadSuccess">
+                    <e-uploader-asyncsettings saveUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Save" removeUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Remove">
+                    </e-uploader-asyncsettings>
+                </ejs-uploader>
+            </div>
+        </div>
+
     </div>
+
 </div>
-
-

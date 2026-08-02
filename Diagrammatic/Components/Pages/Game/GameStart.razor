@@ -70,21 +70,28 @@
     }
 }
 
-@if (_gameInfo != null)
+@if (_started)
 {
     <div class="card mt-3 p-3">
-        <h5>Game Info</h5>
-        <ul>
-            <li><strong>Category:</strong> @_gameInfo.Category</li>
-            <li><strong>Has Started:</strong> @_gameInfo.HasStarted</li>
-            <li><strong>Has Ended:</strong> @_gameInfo.HasEnded</li>
-            <li><strong>Date Started:</strong> @_gameInfo.DateStarted</li>
-            <li><strong>Date Ended:</strong> @_gameInfo.DateEnded</li>
-            <li><strong>Participants:</strong> @_gameInfo.Participants</li>
-            <li><strong>Total Exercises:</strong> @_gameInfo.TotalExercises</li>
-            <li><strong>Date Time To End:</strong> @_gameInfo.DateTimeToEnd</li>
-            <li><strong>Date Time To Next Exercise:</strong> @_gameInfo.DateTimeToNextExercise</li>
-        </ul>
+        <h5>Current Round Exercise</h5>
+        @if (_currentExercise != null)
+        {
+            <ul>
+                <li><strong>Name:</strong> @_currentExercise.Name</li>
+                <li><strong>Category:</strong> @_currentExercise.Category</li>
+                <li><strong>Problem Type:</strong> @_currentExercise.ProblemType</li>
+                <li><strong>Weight:</strong> @_currentExercise.Weight</li>
+                <li><strong>Time To Complete (s):</strong> @_currentExercise.TimeToComplete</li>
+            </ul>
+        }
+        else if (!string.IsNullOrEmpty(_exerciseErrorMessage))
+        {
+            <p class="text-muted mb-0">@_exerciseErrorMessage</p>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Loading exercise...</p>
+        }
     </div>
 }
 
@@ -96,7 +103,8 @@
 @code {
     private Guid _selectedExamId = Guid.Empty;
     private ExamDto? _selectedExam;
-    private GameInfoDto? _gameInfo;
+    private GameExerciseDto? _currentExercise;
+    private string _exerciseErrorMessage = "";
     private List<ExamDto> _examCollection = new(); // Initialized to avoid null errors
     private string _errorMessage = "";
 
@@ -222,6 +230,44 @@
         }
     }
 
+    // ---------------- CURRENT EXERCISE ----------------
+    private async Task LoadCurrentExerciseAsync()
+    {
+        if (_selectedExamId == Guid.Empty) return;
+
+        try
+        {
+            var client = await CreateClientAsync();
+            if (client == null) return;
+
+            var response = await client.GetAsync($"/api/game/{_selectedExamId}/exercise");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                _currentExercise = null;
+                _exerciseErrorMessage = "No exercise available for the current round.";
+            }
+            else if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _currentExercise = Newtonsoft.Json.JsonConvert.DeserializeObject<GameExerciseDto>(json);
+                _exerciseErrorMessage = "";
+            }
+            else
+            {
+                _currentExercise = null;
+                _exerciseErrorMessage = $"Failed to load current exercise: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _currentExercise = null;
+            _exerciseErrorMessage = $"Failed to load current exercise: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
     // ---------------- SIGNALR ----------------
     private async Task ConnectToHubAsync()
     {
@@ -245,14 +291,22 @@
             if (TryGetExamId(json, out var examId) && examId != _selectedExamId)
                 return; // event for a different game
 
-            if (eventType is "ParticipantEntered" or "ParticipantLeft")
+            switch (eventType)
             {
-                await InvokeAsync(RefreshParticipantCountAsync);
+                case "ParticipantEntered":
+                case "ParticipantLeft":
+                    await InvokeAsync(RefreshParticipantCountAsync);
+                    break;
+                case "ExerciseCompleted":
+                case "ExerciseSkipped":
+                case "ExerciseTimeChanged":
+                    await InvokeAsync(LoadCurrentExerciseAsync);
+                    break;
             }
         });
 
-        // After a dropped connection, re-sync the count.
-        _hub.Reconnected += _ => InvokeAsync(RefreshParticipantCountAsync);
+        // After a dropped connection, re-sync whatever is currently on screen.
+        _hub.Reconnected += _ => InvokeAsync(_started ? LoadCurrentExerciseAsync : RefreshParticipantCountAsync);
 
         try
         {
@@ -313,13 +367,12 @@
 
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
-                _gameInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<GameInfoDto>(json);
-
-                // Game officially started: leave the lobby and stop listening for joins.
+                // Game officially started: leave the lobby, but keep the hub connected so
+                // round-change events (ExerciseCompleted/Skipped/TimeChanged) can refresh
+                // the current exercise below.
                 _started = true;
                 _inLobby = false;
-                await DisconnectHubAsync();
+                await LoadCurrentExerciseAsync();
 
                 toastService.ShowSuccess("Game started successfully!");
             }

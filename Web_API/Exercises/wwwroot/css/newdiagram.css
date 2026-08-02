@@ -1,147 +1,384 @@
-#container {
-    display: block;
+/* =========================================================
+   Diagram editor — modern, mobile-first shell.
+   Rendered standalone and inside an iframe (student game view),
+   so the whole thing is sized off its container, never fixed px.
+   Tokens mirror the Diagrammatic front-end design system.
+   ========================================================= */
+
+:root {
+    --dg-bg: #f8fafc;
+    --dg-surface: #ffffff;
+    --dg-surface-alt: #f1f5f9;
+    --dg-border: #e2e8f0;
+    --dg-text: #0f172a;
+    --dg-muted: #64748b;
+    --dg-accent: #4f46e5;
+    --dg-accent-soft: #eef2ff;
+    --dg-accent-border: #c7d2fe;
+    --dg-danger: #dc2626;
+    --dg-danger-soft: #fee2e2;
+    --dg-radius: 14px;
+    --dg-radius-sm: 10px;
+    --dg-shadow-sm: 0 1px 2px rgba(15, 23, 42, .06), 0 1px 1px rgba(15, 23, 42, .04);
+    --dg-shadow-md: 0 4px 10px -2px rgba(15, 23, 42, .08), 0 2px 4px -2px rgba(15, 23, 42, .06);
+    --dg-ease: cubic-bezier(.2, .8, .2, 1);
+    --dg-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* Comfortable touch target — Syncfusion's own controls sit next to these. */
+    --dg-tap: 42px;
 }
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    /* site.min.css pads the body for the marketing layout; this view is an app. */
+    margin: 0;
+    padding: 0 !important;
+    background: var(--dg-bg);
+    color: var(--dg-text);
+    font-family: var(--dg-font);
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+}
+
+body > .container-fluid {
+    height: 100%;
+    max-width: none;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* ---------- App shell ---------- */
+.dg-app {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--dg-bg);
+}
+
+/* ---------- Toolbar ---------- */
+.dg-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--dg-border);
+    box-shadow: var(--dg-shadow-sm);
+    /* Narrow screens scroll the toolbar instead of wrapping it into a wall.
+       The paired gradients are the classic scrolling-shadow trick: a soft edge
+       shadow shows up only while there are more tools in that direction. */
+    background-color: var(--dg-surface);
+    background-image:
+        linear-gradient(to right, var(--dg-surface), rgba(255, 255, 255, 0)),
+        linear-gradient(to left, var(--dg-surface), rgba(255, 255, 255, 0)),
+        radial-gradient(farthest-side at 0 50%, rgba(15, 23, 42, .13), rgba(15, 23, 42, 0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(15, 23, 42, .13), rgba(15, 23, 42, 0));
+    background-position: left center, right center, left center, right center;
+    background-repeat: no-repeat;
+    background-size: 28px 100%, 28px 100%, 11px 100%, 11px 100%;
+    background-attachment: local, local, scroll, scroll;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-top: calc(8px + env(safe-area-inset-top));
+}
+
+.dg-toolbar::-webkit-scrollbar {
+    height: 0;
+}
+
+.dg-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.dg-sep {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 22px;
+    margin: 0 4px;
+    background: var(--dg-border);
+}
+
+.dg-spacer {
+    flex: 1 1 auto;
+}
+
+.dg-tool {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: var(--dg-tap);
+    height: var(--dg-tap);
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: var(--dg-radius-sm);
+    background: transparent;
+    color: var(--dg-muted);
+    font: 500 13px/1 var(--dg-font);
+    cursor: pointer;
+    transition: background-color 120ms var(--dg-ease), color 120ms var(--dg-ease),
+                border-color 120ms var(--dg-ease), transform 80ms var(--dg-ease);
+}
+
+.dg-tool i {
+    font-size: 15px;
+}
+
+.dg-tool:hover {
+    background: var(--dg-surface-alt);
+    color: var(--dg-text);
+}
+
+.dg-tool:active {
+    transform: scale(.94);
+}
+
+.dg-tool:focus-visible {
+    outline: 2px solid var(--dg-accent);
+    outline-offset: 1px;
+}
+
+/* .active is toggled by the existing .tools_select handler */
+.dg-tool.active {
+    background: var(--dg-accent-soft);
+    border-color: var(--dg-accent-border);
+    color: var(--dg-accent);
+}
+
+.dg-tool--danger:hover {
+    background: var(--dg-danger-soft);
+    color: var(--dg-danger);
+}
+
+.dg-ico {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.dg-label {
+    white-space: nowrap;
+}
+
+/* ---------- Workspace ---------- */
+.dg-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.dg-canvas {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 8px;
+    background: var(--dg-surface);
+    border: 1px solid var(--dg-border);
+    border-radius: var(--dg-radius);
+    box-shadow: var(--dg-shadow-md);
+    overflow: hidden;
+    /* Let the diagram handle drags/pinches instead of the browser scrolling. */
+    touch-action: none;
+}
+
+/* The diagram's own pixel size is set from JS (dgSizeToContainer); don't fight
+   it with !important rules here. */
 #diagram {
     display: block;
+    border: 0 !important;
 }
 
-.row {
-   
-    margin-left: 0px;
-    margin-right: 0px;
+/* ---------- Shape tray / palette ---------- */
+.dg-palette {
+    flex: 0 0 auto;
+    background: var(--dg-surface);
+    border-top: 1px solid var(--dg-border);
+    box-shadow: 0 -4px 14px rgba(15, 23, 42, .05);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
 }
 
-.row-header {
+.dg-palette-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dg-hint {
+    display: none;
+    margin: 10px 2px 0;
     font-size: 12px;
-    font-weight: 500;
+    line-height: 1.45;
+    color: var(--dg-muted);
 }
 
-.image-pattern-style {
-    background-color: white;
-    background-size: contain;
-    background-repeat: no-repeat;
-    height: 45px;
-    width: calc((100% - 12px) / 3);
-    cursor: pointer;
-    border: 1px solid #D5D5D5;
-    background-position: center;
-    float: left;
+.dg-hint strong {
+    color: var(--dg-text);
+    font-weight: 600;
+}
+
+/* Visually hidden, but still clickable from the Open button. */
+.dg-uploader {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .e-file-select-wrap {
     display: none;
 }
 
-#editor {
-    width: 100%;
-    height: 350px;
-    border: 5px solid #045c86;
-}
-#editor-mode
-{
-    font-size:x-small;
+/* ---------- Syncfusion overrides ---------- */
+#symbolpalette,
+#symbolpalette .e-acrdn-item,
+#symbolpalette .e-accordion {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
+#symbolpalette .e-acrdn-header {
+    padding: 2px 6px !important;
+    min-height: 0 !important;
+}
+
+#symbolpalette .e-acrdn-header-content,
 .e-acrdn-header-content {
-    font-family: 'Saira', sans-serif !important;
-    font-weight: bold !important;
-    color: #045c86 !important;
+    font-family: var(--dg-font) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--dg-muted) !important;
 }
 
-.btn-connector {
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    display: flex!important;
+#symbolpalette .e-acrdn-panel .e-acrdn-content {
+    padding: 0 !important;
 }
 
-.straight-connector {
-    background-image: url('/images/Connectors_1.png');
+#symbolpalette .e-symbol-draggable {
+    border-radius: var(--dg-radius-sm);
+    transition: background-color 120ms var(--dg-ease);
+    cursor: grab;
 }
 
-.cubic-connector {
-    background-image: url('/images/Connectors_3.png');
-}
-
-.control-section
-{
-    padding:0px!important;
+#symbolpalette .e-symbol-draggable:hover {
+    background: var(--dg-accent-soft);
 }
 
 .e-checkbox-wrapper .e-frame.e-check {
-    background-color: #045c86 !important;
+    background-color: var(--dg-accent) !important;
+    border-color: var(--dg-accent) !important;
 }
 
-
-.control-section ul {
-    list-style-type: none;
-    margin: 0px !important;
-    padding: 0px !important;
-    overflow: hidden;
-}
-
-.control-section li {
-    float: left;
-    background-color: #045c86;
-    list-style: none;
-}
-
-.control-section li a {
-    display: inline-block;
-    color: white!important;
-    text-align: center;
-    padding: 10px 16px;
-    text-decoration: none !important;
-}
-
-.dropbtn {
-    width: 100%;
-    display: inline-block;
-    text-align: center;
-    padding: 10px 16px;
-    text-decoration: none !important;
-}
-
-.control-section li:hover, .control-section .customdropdown:hover .dropbtn, .control-section .active {
-    background-color: cornflowerblue;
-    text-decoration: none !important;
-    color: white;
-    cursor: pointer;
-}
-
-.control-section li.customdropdown {
-    display: inline-block;
-}
-
-.control-section .dropdown-content {
+/* ---------- Loose-connector warning (built by newdiagram.js) ---------- */
+.dg-warning {
+    /* Floats over the canvas just below the toolbar, so it never covers a tool. */
+    position: fixed;
+    top: calc(66px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    pointer-events: none;
     display: none;
-    position: absolute;
-    background-color: #f9f9f9;
-    min-width: 20%;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
+    align-items: center;
+    gap: 8px;
+    max-width: min(92%, 460px);
+    padding: 9px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    background: rgba(254, 226, 226, .95);
+    backdrop-filter: blur(6px);
+    color: #991b1b;
+    font: 500 12.5px/1.35 var(--dg-font);
+    text-align: center;
+    box-shadow: var(--dg-shadow-md);
 }
 
-.control-section .dropdown-content a {
-    padding: 10px 12px;
-    text-decoration: none;
-    display: block;
-    color: black!important;
+.dg-warning.is-visible {
+    display: flex;
 }
 
-.control-section .dropdown-content a:hover {
-    background-color: #f1f1f1
+/* ---------- Tablet / desktop ---------- */
+@media (min-width: 768px) {
+    .dg-workspace {
+        flex-direction: row;
+    }
+
+    .dg-palette {
+        order: -1;                 /* tray becomes a left sidebar */
+        width: 216px;
+        flex: 0 0 216px;
+        border-top: 0;
+        border-right: 1px solid var(--dg-border);
+        box-shadow: none;
+        padding: 12px;
+        overflow-y: auto;
+    }
+
+    .dg-canvas {
+        margin: 12px;
+    }
+
+    .dg-hint {
+        display: block;
+    }
 }
 
-.control-section .customdropdown:hover .dropdown-content {
-    display: block;
-}
-span.glyphicon
-{
-    font-size:x-small;
+/* Only show button captions once there is room for them. */
+@media (max-width: 899px) {
+    .dg-label {
+        display: none;
+    }
+
+    .dg-tool {
+        padding: 0 8px;
+    }
 }
 
-td,th {
+/* ---------- Small phones ---------- */
+@media (max-width: 480px) {
+    .dg-canvas {
+        margin: 6px;
+        border-radius: 12px;
+    }
+
+    .dg-toolbar {
+        gap: 2px;
+        padding-inline: 6px;
+    }
+}
+
+/* ---------- Legacy exercise-authoring bits (hidden Code partial) ---------- */
+#editor {
+    width: 100%;
+    height: 350px;
+    border: 1px solid var(--dg-border);
+    border-radius: var(--dg-radius-sm);
+}
+
+#editor-mode {
+    font-size: 12px;
+}
+
+td, th {
     padding: 5px 20px;
 }
-
