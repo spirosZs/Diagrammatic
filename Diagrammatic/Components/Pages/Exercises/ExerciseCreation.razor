@@ -6,13 +6,16 @@
 @using Diagrammatic_test.Components.Shared.Dto
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Hosting
 @using System.Globalization
+@using System.IO
 @using System.Text.Json
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject IWebHostEnvironment HostEnvironment
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
 @attribute [Authorize(Roles = "Teacher")]
@@ -67,8 +70,24 @@
     @if (_exercise.Category == "path")
     {
         <div class="form-group">
-            <label>URL</label>
-            <input class="form-control" @bind="_diagramUrl" />
+            <label>Diagram image (upload a .png or .jpg)</label>
+            <InputFile OnChange="UploadDiagramImage" accept=".png,.jpg,.jpeg" />
+            @if (_imageBytes is not null)
+            {
+                <div class="text-success mt-1">
+                    @_imageFileName selected (@FormatSize(_imageBytes.Length)).
+                </div>
+                <img src="@_imagePreview" alt="Selected diagram" class="mt-2 d-block img-thumbnail"
+                     style="max-width:320px" />
+            }
+        </div>
+
+        <div class="form-group">
+            <label>Definition (shown to the student above the image)</label>
+            <textarea class="form-control"
+                      rows="2"
+                      placeholder="Optional. e.g. List every path from node 1 to node 9."
+                      @bind="_pathDefinitionInput"></textarea>
         </div>
 
         <div class="form-group">
@@ -126,9 +145,29 @@
     private string _pathsInput = string.Empty;
     private string _creditsInput = string.Empty;
     private string _definitionInput = string.Empty;
+    private string _pathDefinitionInput = string.Empty;
 
     private List<ExerciseCollectionDto> _exerciseCollections = new();
     private string? _errorMessage;
+
+    /* ===========================
+     * Path exercise image upload
+     * ===========================*/
+
+    // Where DiagramEvaluation.razor's <img src="@diagramUrl"> resolves from: this app's own
+    // wwwroot, served by UseStaticFiles. The diagram's Url is stored as "/DiagramPhotos/<file>",
+    // so the student's browser fetches it straight off the Blazor host.
+    private const string DiagramPhotosFolder = "DiagramPhotos";
+
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    private static readonly string[] AllowedImageExtensions = { ".png", ".jpg", ".jpeg" };
+
+    // The picked image is held in memory and only written to wwwroot on submit, so abandoning
+    // the form does not leave orphaned files behind.
+    private byte[]? _imageBytes;
+    private string? _imageFileName;
+    private string? _imagePreview;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -155,14 +194,8 @@
             httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await httpClient.GetAsync("/api/exerciseCollection");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections =
-                    Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json)!;
-            }
+            _exerciseCollections =
+                await httpClient.GetAllPagesAsync<ExerciseCollectionDto>("/api/exerciseCollection");
         }
         catch (Exception ex)
         {
@@ -191,12 +224,17 @@
 
             if (_exercise.Category == "path")
             {
-                diagram.Url = _diagramUrl;
+                if (_imageBytes is null)
+                    throw new Exception("Please upload a .png or .jpg image for this exercise.");
 
-                // Parse paths
+                // Parse paths. The server scores a path by exact string match against these,
+                // so runs of whitespace are collapsed to single spaces here exactly as
+                // DiagramEvaluation.razor does to the student's answer — otherwise "1  2 3"
+                // typed on one side and "1 2 3" on the other never match.
                 var paths = _pathsInput
                     .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(p => p.Trim())
+                    .Select(p => string.Join(" ", p.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)))
+                    .Where(p => p.Length > 0)
                     .ToList();
 
                 // Parse credits
@@ -215,6 +253,16 @@
                         Credits = credits[i]
                     })
                     .ToList();
+
+                // Everything else about the exercise is valid by now, so commit the image to
+                // wwwroot/DiagramPhotos and point the diagram at it. DiagramEvaluation.razor
+                // renders exactly this value as the <img> source.
+                diagram.Url = await SaveDiagramImageAsync();
+
+                // A path exercise has no graph json behind it, but Diagrams.Definition is NOT NULL,
+                // so it can never be left unset. DiagramEvaluation.razor prints this above the
+                // image, so it holds the exercise text — empty (not null) when there is none.
+                diagram.Definition = _pathDefinitionInput.Trim();
             }
             else
             {
@@ -265,6 +313,8 @@
                 _pathsInput = string.Empty;
                 _creditsInput = string.Empty;
                 _definitionInput = string.Empty;
+                _pathDefinitionInput = string.Empty;
+                ClearDiagramImage();
             }
             else
             {
@@ -276,6 +326,93 @@
             _errorMessage = ex.Message;
         }
     }
+
+    /* ===========================
+     * Path exercise image upload
+     * ===========================*/
+
+    // Reads the picked .png/.jpg into memory and shows it back to the teacher. Nothing
+    // touches the disk until the exercise is actually created.
+    private async Task UploadDiagramImage(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+            if (!AllowedImageExtensions.Contains(extension))
+                throw new Exception("Only .png, .jpg and .jpeg images are supported.");
+
+            if (file.Size > MaxImageBytes)
+                throw new Exception($"The image must be {FormatSize(MaxImageBytes)} or smaller.");
+
+            using var stream = file.OpenReadStream(MaxImageBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            _imageBytes = buffer.ToArray();
+            _imageFileName = file.Name;
+
+            // Preview only — the stored file is written to wwwroot on submit.
+            var contentType = extension == ".png" ? "image/png" : "image/jpeg";
+            _imagePreview = $"data:{contentType};base64,{Convert.ToBase64String(_imageBytes)}";
+
+            toastService.ShowSuccess("Image loaded.");
+        }
+        catch (Exception ex)
+        {
+            ClearDiagramImage();
+            toastService.ShowError($"Failed to read image: {ex.Message}");
+        }
+    }
+
+    // Writes the buffered image into wwwroot/DiagramPhotos and returns the root-relative url
+    // that DiagramEvaluation.razor puts straight into its <img src>.
+    private async Task<string> SaveDiagramImageAsync()
+    {
+        var webRoot = HostEnvironment.WebRootPath
+                      ?? Path.Combine(HostEnvironment.ContentRootPath, "wwwroot");
+
+        var folder = Path.Combine(webRoot, DiagramPhotosFolder);
+        Directory.CreateDirectory(folder);
+
+        var fileName = BuildImageFileName(_imageFileName!);
+        await File.WriteAllBytesAsync(Path.Combine(folder, fileName), _imageBytes!);
+
+        return $"/{DiagramPhotosFolder}/{fileName}";
+    }
+
+    // The teacher's file name is only a hint: it is stripped down to letters and digits and
+    // given a random suffix, so two uploads called "graph.png" cannot overwrite each other and
+    // nothing in the name can escape the DiagramPhotos folder.
+    private static string BuildImageFileName(string originalName)
+    {
+        var extension = Path.GetExtension(originalName).ToLowerInvariant();
+
+        var stem = new string(Path.GetFileNameWithoutExtension(originalName)
+            .Select(c => char.IsLetterOrDigit(c) ? c : '-')
+            .ToArray()).Trim('-');
+
+        if (stem.Length > 40)
+            stem = stem.Substring(0, 40);
+
+        if (string.IsNullOrEmpty(stem))
+            stem = "diagram";
+
+        return $"{stem}-{Guid.NewGuid():N}{extension}";
+    }
+
+    private void ClearDiagramImage()
+    {
+        _imageBytes = null;
+        _imageFileName = null;
+        _imagePreview = null;
+    }
+
+    private static string FormatSize(long bytes) =>
+        bytes >= 1024 * 1024
+            ? $"{bytes / (1024d * 1024d):0.#} MB"
+            : $"{Math.Max(1, bytes / 1024)} KB";
 
     private async Task UploadDiagramFile(InputFileChangeEventArgs e)
     {

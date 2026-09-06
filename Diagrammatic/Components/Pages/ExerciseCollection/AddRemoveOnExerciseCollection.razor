@@ -129,20 +129,11 @@ else
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await httpClient.GetAsync("/api/exerciseCollection");
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
-            }
-            else
-            {
-                _errorMessage = "Failed to load exercise collections.";
-            }
+            _exerciseCollections = await httpClient.GetAllPagesAsync<ExerciseCollectionDto>("/api/exerciseCollection");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Failed to load exercise collections. {ex.Message}";
         }
     }
 
@@ -154,20 +145,11 @@ else
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await httpClient.GetAsync("/api/exercise"); // Adjust endpoint if needed
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _exercises = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseDto>>(json);
-            }
-            else
-            {
-                _errorMessage = "Failed to load exercises.";
-            }
+            _exercises = await httpClient.GetAllPagesAsync<ExerciseDto>("/api/exercise");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Failed to load exercises. {ex.Message}";
         }
     }
 
@@ -233,25 +215,16 @@ else
             var token = await SessionStorage.GetItemAsync<string>("authToken");
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            HttpResponseMessage response;
-            if (selectedOp == ExerciseCollectionOperation.AddExercise ||
-             selectedOp == ExerciseCollectionOperation.RemoveExercise)
-                response = await httpClient.GetAsync("/api/exerciseCollection");
-            else
-                response = await httpClient.GetAsync("/api/exam");
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json);
-            }
-            else
-            {
-                _errorMessage = "Failed to load exercise collections.";
-            }
+            var url = selectedOp == ExerciseCollectionOperation.AddExercise ||
+                      selectedOp == ExerciseCollectionOperation.RemoveExercise
+                ? "/api/exerciseCollection"
+                : "/api/exam";
+
+            _exerciseCollections = await httpClient.GetAllPagesAsync<ExerciseCollectionDto>(url);
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Failed to load exercise collections. {ex.Message}";
         }
     }
 

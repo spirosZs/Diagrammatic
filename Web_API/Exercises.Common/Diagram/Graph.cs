@@ -145,7 +145,67 @@ namespace Exercises.Common.Diagram
         }
 
         /// <summary>
-        /// Compares two sets of paths.
+        /// Compares two sets of paths, awarding each correct path the credit the teacher
+        /// gave it.
+        /// </summary>
+        /// <remarks>
+        /// The unweighted <see cref="ComparePaths(string[],string[])"/> splits the maximum
+        /// score evenly over the correct paths and ignores <paramref name="credits"/>
+        /// entirely, so an exercise weighted 50/30/20 scored 67 — not 80 — for the 50 and
+        /// the 30. Here each matched path is worth exactly what it was given.
+        ///
+        /// Falls back to the even split when the credits are missing or do not line up with
+        /// the paths one-for-one, since there is then no per-path weight to apply.
+        /// </remarks>
+        /// <param name="input">The paths the student submitted.</param>
+        /// <param name="correct">The correct paths, in the teacher's order.</param>
+        /// <param name="credits">The credit for each correct path, aligned by index.</param>
+        /// <returns>An evaluation of the input based on the correct paths.</returns>
+        public static int ComparePaths(string[] input, string[] correct, double[] credits)
+        {
+            var correctAnswers = correct?.ToList() ?? new List<string>();
+
+            if (credits == null || credits.Length != correctAnswers.Count)
+            {
+                return ComparePaths(input ?? new string[0], correct ?? new string[0]);
+            }
+
+            var answersGiven = input?.ToList() ?? new List<string>();
+
+            // Each correct path can be claimed once, so repeating one that already scored
+            // earns nothing the second time.
+            var claimed = new bool[correctAnswers.Count];
+            var score = 0d;
+
+            foreach (var answerGiven in answersGiven)
+            {
+                for (var i = 0; i < correctAnswers.Count; i++)
+                {
+                    if (claimed[i] || correctAnswers[i] != answerGiven)
+                    {
+                        continue;
+                    }
+
+                    claimed[i] = true;
+                    score += credits[i];
+                    break;
+                }
+            }
+
+            // A wrong path costs nothing by itself — it simply earns no credit. Only
+            // answering more times than there are paths is penalised, which is what stops
+            // a student listing every path they can think of and collecting the lot.
+            var surplus = answersGiven.Count - correctAnswers.Count;
+            if (surplus > 0)
+            {
+                score -= surplus * Constants.REDUNDANT_ANSWER_NEGATIVE_IMPACT;
+            }
+
+            return score < 0 ? 0 : (int) Math.Round(score, MidpointRounding.AwayFromZero);
+        }
+
+        /// <summary>
+        /// Compares two sets of paths, splitting the maximum score evenly between them.
         /// </summary>
         /// <param name="input"></param>
         /// <param name="correct"></param>

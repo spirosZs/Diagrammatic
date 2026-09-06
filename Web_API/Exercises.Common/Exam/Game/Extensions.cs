@@ -18,6 +18,9 @@ namespace Exercises.Common.Exam.Game
                 DateEnded = exam.DateEnded,
                 TotalExercises = exam.TotalExercises,
                 Participants = exam.Participations.Count,
+                CurrentExerciseId = exam.CurrentExerciseId,
+                CurrentExerciseIndex = exam.CurrentExerciseIndex,
+                IsOnLastExercise = exam.HasStarted() && exam.IsOnLastExercise,
             };
             if (exam.IsOngoing())
             {

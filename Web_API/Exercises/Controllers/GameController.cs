@@ -85,7 +85,9 @@ namespace Exercises.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Game([FromRoute] Guid id, CancellationToken token = default)
         {
-            var exam = await _examService.GetAsync(id, token);
+            // Settle any elapsed round deadline first, so the reported state is never
+            // stale just because the worker missed its cue.
+            var exam = await _examService.SyncProgress(id, token);
             var response = exam.MapToGameInfoDto();
             return Ok(response);
         }
@@ -107,7 +109,10 @@ namespace Exercises.Controllers
         {
             try
             {
-                var exercise = await _examService.GetExercise(id, token);
+                // Same catch-up as GET /api/game/{id}: a client asking which exercise is
+                // current must not be handed a round whose time is already up.
+                var exam = await _examService.SyncProgress(id, token);
+                var exercise = exam.CurrentExercise;
 
                 if (exercise == null)
                 {

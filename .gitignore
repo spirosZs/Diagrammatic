@@ -99,3 +99,8 @@ Diagrammatic/.vs/Diagrammatic_test/v17/DocumentLayout.backup.json
 Diagrammatic/.vs/Diagrammatic_test/v17/DocumentLayout.json
 Diagrammatic/.vs/ProjectEvaluation/diagrammatic_test.strings.v9.bin
 Diagrammatic/.claude/settings.json
+
+# Diagram images uploaded through the exercise creation form. These are user content,
+# not source; download.png stays tracked because it was committed before this rule.
+Diagrammatic/wwwroot/DiagramPhotos/*
+!Diagrammatic/wwwroot/DiagramPhotos/download.png

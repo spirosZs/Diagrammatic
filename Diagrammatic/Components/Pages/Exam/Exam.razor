@@ -90,20 +90,11 @@
             var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var response = await httpClient.GetAsync("/api/exerciseCollection");
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _exerciseCollections = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExerciseCollectionDto>>(json) ?? new();
-            }
-            else
-            {
-                _errorMessage = "Failed to load exercise collections.";
-            }
+            _exerciseCollections = await httpClient.GetAllPagesAsync<ExerciseCollectionDto>("/api/exerciseCollection");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Failed to load exercise collections. {ex.Message}";
         }
     
     }

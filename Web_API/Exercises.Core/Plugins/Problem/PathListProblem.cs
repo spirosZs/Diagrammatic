@@ -25,8 +25,10 @@ namespace Exercises.Core.Plugins.Problem
             }
             
             var exercise = (PathExercise) submission.Exercise;
-            
-            return Graph.ComparePaths(answersGiven, exercise.Paths);
+
+            // Scored against the teacher's per-path credits: an exercise weighted 50/30/20
+            // pays 80 for the first two paths, not an even share of 100.
+            return Graph.ComparePaths(answersGiven, exercise.Paths, exercise.Credits);
         }
     }
 }

@@ -1,9 +1,10 @@
 @page "/diagram-evaluation-simulation"
 @attribute [Authorize(Roles = "Teacher")]
+@inject IOptions<ApiOptions> ApiOptions
 
 <h3>Diagram Evaluation Simulation</h3>
 
 <div class="p-3 border rounded shadow-sm">
-    <iframe src="http://localhost:8083/diagramEvaluation"
+    <iframe src="@ApiOptions.Value.DiagramEditorUrl"
             width="100%" height="600"></iframe>
 </div>

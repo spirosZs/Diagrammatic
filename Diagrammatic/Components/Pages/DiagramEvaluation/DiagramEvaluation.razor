@@ -17,6 +17,7 @@
 @inject IToastService toastService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IOptions<ApiOptions> ApiOptions
 
 <div class="eval-page">
 
@@ -62,10 +63,23 @@
             <div class="eval-card-head">
                 <div class="eval-badge eval-badge--success"><i class="bi bi-clipboard-check"></i></div>
                 <div>
-                    <h2 class="eval-card-title">Review &amp; submit</h2>
+                    <h2 class="eval-card-title">All done</h2>
                     <p class="eval-card-text">
-                        Your diagrams were captured automatically at the end of each round.
-                        Check them below, then send them in.
+                        @if (PendingSubmissions.Any())
+                        {
+                            <text>
+                                Your answers were sent in automatically as each round ended.
+                                One or more are still going out — leave this page open until
+                                they're all confirmed.
+                            </text>
+                        }
+                        else
+                        {
+                            <text>
+                                Your answers were sent in automatically as each round ended.
+                                There's nothing left to do.
+                            </text>
+                        }
                     </p>
                 </div>
             </div>
@@ -78,19 +92,18 @@
                             <span class="eval-item-name">@item.Name</span>
 
                             <div class="eval-chips">
-                                @if (item.SubmissionData != null)
+                                @if (item.Submitted)
                                 {
                                     <span class="eval-chip eval-chip--ok">
-                                        <i class="bi bi-check-circle-fill"></i> Answer captured
+                                        <i class="bi bi-send-check"></i> Submitted
                                     </span>
-
-                                    @if (item.DanglingConnectors > 0)
-                                    {
-                                        <span class="eval-chip eval-chip--warn">
-                                            <i class="bi bi-exclamation-triangle-fill"></i>
-                                            @item.DanglingConnectors loose arrow(s) — not scored
-                                        </span>
-                                    }
+                                }
+                                else if (item.HasAnswer)
+                                {
+                                    <span class="eval-chip eval-chip--info">
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        Sending…
+                                    </span>
                                 }
                                 else
                                 {
@@ -99,15 +112,26 @@
                                     </span>
                                 }
 
-                                @if (item.Submitted)
+                                @if (item.DanglingConnectors > 0)
                                 {
-                                    <span class="eval-chip eval-chip--info">
-                                        <i class="bi bi-send-check"></i> Submitted
+                                    <span class="eval-chip eval-chip--warn">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        @item.DanglingConnectors loose arrow(s) — not scored
                                     </span>
                                 }
                             </div>
 
-                            @if (item.SubmissionData == null)
+                            @if (!item.Submitted && !string.IsNullOrEmpty(item.SubmitError))
+                            {
+                                <p class="eval-error">@item.SubmitError — retrying automatically.</p>
+                            }
+
+                            @* Last-resort recovery: only when nothing could be captured
+                               from the editor. Uploading sends the answer straight away —
+                               there is no separate submit step. A path answer is typed, not
+                               captured, so it can never land here and the JSON upload would
+                               make no sense for it. *@
+                            @if (!item.HasAnswer && item.Category == "diagram")
                             {
                                 <div class="eval-upload">
                                     <label class="eval-upload-label">Upload your saved diagram JSON instead</label>
@@ -126,22 +150,6 @@
                     </li>
                 }
             </ul>
-
-            <div class="eval-actions">
-                <button class="btn btn-primary btn-lg eval-btn-block"
-                        @onclick="SubmitAllAsync"
-                        disabled="@isSubmitting">
-                    @if (isSubmitting)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <text>Submitting…</text>
-                    }
-                    else
-                    {
-                        <text>Submit all answers</text>
-                    }
-                </button>
-            </div>
         </section>
     }
     else if (!gameStarted)
@@ -161,8 +169,8 @@
             <div class="eval-pulse eval-pulse--warn"><i class="bi bi-alarm"></i></div>
             <h2 class="eval-card-title">Time's up!</h2>
             <p class="eval-card-text">
-                Your answer for <strong>@exerciseName</strong> has been saved. Waiting for the
-                teacher to move on to the next exercise…
+                Your answer for <strong>@exerciseName</strong> has been submitted. Waiting for
+                the teacher to move on to the next exercise…
             </p>
         </section>
     }
@@ -192,18 +200,14 @@
                 <div class="eval-progress-bar @TimerState" style="width:@ProgressWidth"></div>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(diagramUrl))
-            {
-                <details class="eval-brief" open>
-                    <summary>Exercise description</summary>
-                    <p>@diagramUrl</p>
-                </details>
-            }
+            @* The exercise definition is deliberately NOT shown here: the teacher
+               reads it out from their own live view (GameStart.razor), so the
+               student's stage stays entirely given over to the editor. *@
 
             <div class="eval-frame">
                 <iframe id="diagramFrame"
                         title="Diagram editor"
-                        src="http://localhost:8083/diagramEvaluation"
+                        src="@ApiOptions.Value.DiagramEditorUrl"
                         allow="fullscreen"></iframe>
             </div>
         </section>
@@ -231,16 +235,38 @@
                 <p class="eval-lead">@diagramDefinition</p>
             }
 
-            @if (!string.IsNullOrWhiteSpace(diagramUrl))
-            {
-                <img src="@diagramUrl" class="eval-figure" alt="Exercise diagram" />
-            }
+            @* The exercise image is deliberately NOT shown here. It lives on the teacher's
+               live view (GameStart.razor), which is what the class is looking at, the same
+               way a diagram exercise's definition does. *@
 
-            <label class="eval-upload-label" for="pathAnswer">Your answer</label>
-            <InputTextArea id="pathAnswer"
-                           class="form-control"
-                           rows="3"
-                           @bind-Value="pathAnswer" />
+            @* Scoring is an exact match of each line against the teacher's paths, so the
+               expected shape has to be spelled out — a student who writes prose here
+               scores zero no matter how well they understood the diagram. *@
+            <label class="eval-upload-label" for="pathAnswer">
+                Your answer — one path per line, e.g. <code>1 2 5 6 9</code>
+            </label>
+            @* Deliberately NOT @bind. Two-way binding renders a value attribute, and this
+               component re-renders about once a second for the countdown; every one of
+               those renders rewrites the box from the server's copy of the field, so any
+               keystroke still in flight is wiped from the DOM. That is how a typed
+               "1 2 3" reached the server as "1". Binding on the default onchange is no
+               better — it only commits on blur, and a student typing up to the buzzer
+               never blurs, which sent an empty answer.
+
+               Writing the field from oninput without ever rendering value leaves the DOM
+               as the single source of truth for what the student sees, and no re-render
+               can touch it. @key gives each round a fresh element, which is what clears
+               the box between rounds now that nothing pushes a value into it. *@
+            @* The placeholder comes from a constant rather than a literal: a plain attribute
+               value would have its ampersand encoded, so "&#10;" showed up verbatim in the
+               box instead of becoming a line break. *@
+            <textarea id="pathAnswer"
+                      @key="exerciseId"
+                      class="form-control"
+                      rows="5"
+                      placeholder="@PathAnswerPlaceholder"
+                      @oninput="OnPathAnswerInput"></textarea>
+            <p class="eval-hint">Your answer is submitted automatically when the round ends.</p>
         </section>
     }
 
@@ -279,7 +305,6 @@
     private bool _warned;
 
     private System.Threading.Timer? countdownTimer;
-    private bool isTimerRunning;
 
     // Bumped every time the display timer is (re)started or torn down. Each timer
     // callback captures the generation it was created under and no-ops once a
@@ -294,11 +319,9 @@
 
     // ---------- EXERCISE / DIAGRAM ----------
     private string? exerciseCategory;
-    private string? diagramUrl;        // path: image url | diagram: description text
     private string? diagramDefinition; // path: question/lead text
     private string? pathAnswer;
 
-    private bool isSubmitting;
 
     // ---------- PRESENTATION ----------
     // The editor is embedded in an iframe, so it can only grow as tall as the
@@ -335,10 +358,13 @@
         get
         {
             if (!isAuthorizedWithCode) return "Enter your code to join the session.";
-            if (isExamFinished) return "All rounds finished — review and submit your answers.";
+            if (isExamFinished)
+                return PendingSubmissions.Any()
+                    ? "All rounds finished — sending your remaining answers."
+                    : "All rounds finished — every answer was submitted.";
             if (!gameStarted) return "You're in the lobby. Hang tight.";
-            if (roundTimedOut) return "Answer saved. Waiting for the next exercise.";
-            return "Draw your answer — it's captured automatically when the timer ends.";
+            if (roundTimedOut) return "Answer submitted. Waiting for the next exercise.";
+            return "Draw your answer — it's submitted automatically when the timer ends.";
         }
     }
 
@@ -395,6 +421,7 @@
         // teacher has already started the game before this student joined.
         await ConnectToHubAsync();
         await RefreshGameStateAsync();
+        StartWatchdog();
     }
 
     // ---------------- SIGNALR ----------------
@@ -407,7 +434,7 @@
         var token = await SessionStorage.GetItemAsync<string>("authToken");
 
         _hub = new HubConnectionBuilder()
-            .WithUrl("http://localhost:8083/gameHub", options =>
+            .WithUrl(ApiOptions.Value.HubUrl, options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult<string?>(token);
             })
@@ -427,7 +454,7 @@
                 case "ExerciseCompleted":
                 case "ExerciseSkipped":
                 case "ExerciseTimeChanged":
-                    await InvokeAsync(RefreshGameStateAsync);
+                    await InvokeAsync(() => RefreshGameStateAsync());
                     break;
                 case "Ended":
                     await InvokeAsync(EndExamAsync);
@@ -436,7 +463,7 @@
         });
 
         // After a dropped connection, re-sync (deadline/exercise may have moved on).
-        _hub.Reconnected += _ => InvokeAsync(RefreshGameStateAsync);
+        _hub.Reconnected += _ => InvokeAsync(() => RefreshGameStateAsync());
 
         try
         {
@@ -471,10 +498,44 @@
     }
 
     // ---------------- GAME STATE ----------------
+    // Serializes refreshes. Every mutation of the round state (exerciseId,
+    // roundTimedOut, the countdown timer) happens across awaited HTTP calls, so two
+    // overlapping refreshes interleave their writes — a burst of SignalR broadcasts
+    // arriving while one is in flight could leave the round half-applied. Only one
+    // runs at a time; a request that arrives during one is coalesced into a single
+    // follow-up rather than dropped, since the in-flight refresh may already have
+    // read the API before the newer event was raised.
+    private bool _refreshing;
+    private bool _refreshQueued;
+
+    private async Task RefreshGameStateAsync(bool silent = false)
+    {
+        if (_refreshing)
+        {
+            _refreshQueued = true;
+            return;
+        }
+
+        _refreshing = true;
+        try
+        {
+            do
+            {
+                _refreshQueued = false;
+                await RefreshGameStateCoreAsync(silent);
+            }
+            while (_refreshQueued);
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+    }
+
     // Single source of truth for the started view: pulls the shared deadline,
     // the current exercise, and its diagram definition, then (re)starts the
     // display-only countdown.
-    private async Task RefreshGameStateAsync()
+    private async Task RefreshGameStateCoreAsync(bool silent)
     {
         try
         {
@@ -512,11 +573,42 @@
             {
                 var errorContent = await exResponse.Content.ReadAsStringAsync();
                 _errorMessage = $"Failed to load exercise: {exResponse.StatusCode} - {errorContent}";
-                toastService.ShowError(_errorMessage);
+                if (!silent) toastService.ShowError(_errorMessage);
                 return;
             }
 
             var exercise = await exResponse.Content.ReadFromJsonAsync<GameExerciseResponse>();
+
+            // The deadline and the current exercise come from two separate requests, and
+            // the server can advance the round in between: /api/game/{id} still reports
+            // round N's (by now elapsed) deadline while /exercise already reports round
+            // N+1. Pairing them started N+1's countdown against a deadline in the past,
+            // so it expired within milliseconds — capturing a blank canvas, and on the
+            // final round ending the whole exam a round early. Re-read the game info
+            // until it describes the exercise we were actually handed.
+            var attempts = 0;
+            while (info.CurrentExerciseId.HasValue
+                   && info.CurrentExerciseId.Value != exercise!.Id
+                   && attempts++ < 3)
+            {
+                info = await client.GetFromJsonAsync<GameInfoResponse>(
+                    $"/api/game/{currentGameId}");
+
+                if (info is null) return;
+
+                if (info.HasEnded)
+                {
+                    await EndExamAsync();
+                    return;
+                }
+            }
+
+            // Still disagreeing after retrying: act on the exercise (the student needs
+            // something on screen) but never let an unmatched snapshot end the exam. A
+            // stale expiry then parks on the recoverable "time's up" screen instead,
+            // which the watchdog re-syncs out of.
+            var infoMatchesExercise = !info.CurrentExerciseId.HasValue
+                                      || info.CurrentExerciseId.Value == exercise!.Id;
 
             // Round advanced: snapshot the outgoing exercise so it can be
             // submitted at the end of the game. The editor iframe is only on
@@ -524,8 +616,8 @@
             // (roundTimedOut) or the game has finished — so only try to capture
             // from it in that window.
             var roundAdvanced = exercise!.Id != exerciseId && exerciseId != Guid.Empty;
-            var iframeWasLive = gameStarted && !isExamFinished && !roundTimedOut
-                                && exerciseCategory == "diagram";
+            var roundWasLive = gameStarted && !isExamFinished && !roundTimedOut;
+            var iframeWasLive = roundWasLive && exerciseCategory == "diagram";
 
             // The worker re-broadcasts ExerciseCompleted (and reconnects fire this
             // too). If it's still the exercise we've already timed out / finished
@@ -533,16 +625,48 @@
             // — that endless re-arming is the "stuck in a loop" symptom. Stay put;
             // only a genuinely new round below moves the student on.
             if (!roundAdvanced && exerciseId != Guid.Empty && (roundTimedOut || isExamFinished))
-                return;
+            {
+                // ...with one exception: this round's deadline is now comfortably in
+                // the future, so it is genuinely live again and parking the student on
+                // the "time's up" screen would lock them out of it. That happens when
+                // the teacher extends the round (ExerciseTimeChanged used to be
+                // swallowed here), and when we had timed out against a deadline that
+                // has since been superseded.
+                var roundIsLiveAgain =
+                    roundTimedOut && !isExamFinished
+                    && info.DateTimeToNextExercise.HasValue
+                    && SecondsUntil(info.DateTimeToNextExercise.Value) > 1;
+
+                if (!roundIsLiveAgain)
+                    return;
+
+                // The "time's up" screen unmounted the editor iframe, so it remounts
+                // blank and the answer captured on expiry no longer matches what the
+                // student is looking at. Drop it so the resumed round captures afresh —
+                // but only while it is still ours to replace. Once the server has
+                // accepted it there is no update endpoint, so re-capturing would submit
+                // the same exercise twice; the answer already on record stands.
+                var resumed = completedExercises.FirstOrDefault(x => x.ExerciseId == exerciseId);
+                if (resumed != null && !resumed.Submitted)
+                {
+                    resumed.SubmissionData = null;
+                    resumed.PathAnswers = null;
+                    resumed.Score = null;
+                    resumed.DanglingConnectors = 0;
+                    resumed.SubmitError = null;
+                }
+            }
 
             if (roundAdvanced)
             {
-                // The teacher can skip a round before its timer expires, so the
-                // diagram may not have been captured yet; grab it while the
-                // editor iframe is still rendered. (If the timer already fired,
-                // the answer is captured and this is a no-op.)
-                if (iframeWasLive)
-                    await CaptureCurrentDiagramAsync();
+                // The teacher can skip a round before its timer expires, so the answer may
+                // not have been captured yet; grab it while the exercise view — the editor
+                // iframe, or the answer textarea — is still rendered. (If the timer already
+                // fired, the answer is captured and this is a no-op.)
+                // exerciseId/exerciseName still hold the OUTGOING round here — they are
+                // only advanced further down — so this files the answer correctly.
+                if (roundWasLive)
+                    await CaptureCurrentAnswerAsync(exerciseId, exerciseName);
 
                 RecordCurrentAsCompleted();
                 pathAnswer = null;
@@ -557,19 +681,22 @@
             // endpoint returns 500 for the student role (server-side permission-dictionary
             // bug), which previously aborted this method and left students on the waiting
             // screen instead of transferring to the exercise.
-            diagramUrl = exercise.Diagram?.Url;
+            // Only the definition is read here. The image url on the same object is what the
+            // teacher's view renders; the student's screen deliberately does not show it.
             diagramDefinition = exercise.Diagram?.Definition;
 
             _deadline = info.DateTimeToNextExercise;
 
-            // For the final exercise the server makes the "next exercise" moment and
-            // the "game end" moment identical (its time closes out the whole exam).
-            // We use this to end the game from the client when this round's timer
-            // expires, instead of waiting for the worker's Ended event — which may
-            // never arrive (its EndGame invoke currently errors server-side).
-            isLastRound = info.DateTimeToNextExercise.HasValue
-                          && info.DateTimeToEnd.HasValue
-                          && info.DateTimeToNextExercise == info.DateTimeToEnd;
+            // Used to end the game from the client when this round's timer expires,
+            // instead of waiting for the worker's Ended event. The API reports it
+            // outright; the timestamp comparison behind it is the legacy signal (for
+            // the final exercise the server makes the "next exercise" moment and the
+            // "game end" moment identical) and is kept only as a fallback.
+            isLastRound = infoMatchesExercise
+                          && (info.IsOnLastExercise
+                              || (info.DateTimeToNextExercise.HasValue
+                                  && info.DateTimeToEnd.HasValue
+                                  && info.DateTimeToNextExercise == info.DateTimeToEnd));
 
             _warned = false;
             gameStarted = true;
@@ -588,18 +715,57 @@
         catch (Exception ex)
         {
             _errorMessage = $"Error refreshing game state: {ex.Message}";
-            toastService.ShowError(_errorMessage);
+            if (!silent) toastService.ShowError(_errorMessage);
         }
+    }
+
+    // ---------------- WATCHDOG ----------------
+    // Leaving a waiting screen depends entirely on a SignalR broadcast, so a dropped
+    // or duplicated event — or one that lands before the server has committed the new
+    // round — stranded the student there for the rest of the exam (the reported "the
+    // second exercise never loads"). This re-syncs from the API while, and only
+    // while, we're on a screen that has nothing else to move it on.
+    private const int WatchdogIntervalMs = 5000;
+    private System.Threading.Timer? watchdogTimer;
+
+    private void StartWatchdog()
+    {
+        if (watchdogTimer is not null) return;
+
+        watchdogTimer = new System.Threading.Timer(async _ =>
+        {
+            if (!isAuthorizedWithCode) return;
+
+            // Silent throughout: a poll must not spray toasts on a transient failure —
+            // the next tick retries.
+            try
+            {
+                // Once the exam is over the only outstanding work is getting any failed
+                // automatic submissions through. There is no button for the student to
+                // press, so this is what makes them eventually land.
+                if (isExamFinished)
+                {
+                    if (PendingSubmissions.Any())
+                        await InvokeAsync(() => FlushPendingSubmissionsAsync(silent: true));
+                    return;
+                }
+
+                // A live round is driven by its own countdown; only the lobby and the
+                // "waiting for the next exercise" screens are event-dependent.
+                if (gameStarted && !roundTimedOut) return;
+
+                await InvokeAsync(() => RefreshGameStateAsync(silent: true));
+            }
+            catch { /* transient; retried on the next tick */ }
+        }, null, WatchdogIntervalMs, WatchdogIntervalMs);
     }
 
     // ---------------- TIMER (display-only, server-deadline driven) ----------------
     private void StartOrRefreshTimerDisplay()
     {
-        isTimerRunning = false;
         countdownTimer?.Dispose();
 
         UpdateRemaining();
-        isTimerRunning = true;
 
         // Baseline for the countdown bar: the full length of this round. Only
         // reset on a genuinely new round — SignalR re-broadcasts refresh the
@@ -645,13 +811,28 @@
 
             if (expired)
             {
-                isTimerRunning = false;
                 myTimer?.Dispose();
                 await InvokeAsync(() => OnTimerExpiredAsync(roundId));
             }
         }, null, 0, 1000);
 
         countdownTimer = myTimer;
+    }
+
+    // Seconds from now until a deadline reported by the API. Negative once it's past.
+    //
+    // The API runs in a UTC Docker container and returns DateStarted/DateTimeToNextExercise
+    // as naive timestamps (no offset). Treat them as UTC and compare against UtcNow so the
+    // countdown is correct regardless of the Blazor host's local timezone. (Using DateTime.Now
+    // here made a host ahead of UTC see the deadline already in the past, so the timer expired
+    // instantly and bounced students straight to the submission page.)
+    private static int SecondsUntil(DateTime deadline)
+    {
+        var deadlineUtc = deadline.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(deadline, DateTimeKind.Utc)
+            : deadline.ToUniversalTime();
+
+        return (int)Math.Ceiling((deadlineUtc - DateTime.UtcNow).TotalSeconds);
     }
 
     // Recomputes the remaining time from the shared deadline. Returns true when expired.
@@ -663,18 +844,7 @@
             return true;
         }
 
-        // The API runs in a UTC Docker container and returns DateStarted/DateTimeToNextExercise
-        // as naive timestamps (no offset). Treat them as UTC and compare against UtcNow so the
-        // countdown is correct regardless of the Blazor host's local timezone. (Using DateTime.Now
-        // here made a host ahead of UTC see the deadline already in the past, so the timer expired
-        // instantly and bounced students straight to the submission page.)
-        var deadline = _deadline.Value;
-        var deadlineUtc = deadline.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(deadline, DateTimeKind.Utc)
-            : deadline.ToUniversalTime();
-
-        var secs = (int)Math.Ceiling((deadlineUtc - DateTime.UtcNow).TotalSeconds);
-        remainingSeconds = Math.Max(0, secs);
+        remainingSeconds = Math.Max(0, SecondsUntil(_deadline.Value));
         return remainingSeconds <= 0;
     }
 
@@ -687,53 +857,84 @@
         if (roundId != exerciseId || isExamFinished || roundTimedOut)
             return;
 
-        // Grab the diagram before the view switches — that unmounts the editor
-        // iframe and the drawing with it.
-        await CaptureCurrentDiagramAsync();
+        // Snapshot everything that describes THIS round before the await below. The
+        // fields are shared and a concurrent refresh rewrites them for the next round.
+        var roundName = exerciseName;
+        var roundWasLast = isLastRound;
 
-        RecordCurrentAsCompleted();
+        // Grab the answer before the view switches — that unmounts the editor
+        // iframe (and the drawing with it) or the answer textarea.
+        await CaptureCurrentAnswerAsync(roundId, roundName);
 
-        if (isLastRound)
+        // The capture awaits a JS interop round-trip (up to 3s). The refresh triggered
+        // by the server's own round change runs in that window, so by now the round may
+        // already have advanced — and continuing would apply this expired round's
+        // decision to the new one. That is what ended the exam a full round early:
+        // round 1's expiry resumed here, read the freshly-loaded round 2's
+        // isLastRound == true, and went straight to the results screen, capturing
+        // round 2's untouched canvas as a zero on the way out.
+        if (roundId != exerciseId || isExamFinished || roundTimedOut)
+            return;
+
+        RecordCompleted(roundId, roundName);
+
+        if (roundWasLast)
         {
-            // Last exercise: the game is over. Go straight to the submission
-            // screen instead of waiting for the worker's Ended event (which may
-            // never come). EndExamAsync shows the review & submit view.
+            // Last exercise: the game is over. Go straight to the results screen
+            // instead of waiting for the worker's Ended event (which may never come).
             await EndExamAsync();
             return;
         }
 
         // Middle round: the countdown is display-only and the server advances the
-        // round. Park the student on a waiting screen (NOT the submission view)
+        // round. Park the student on a waiting screen (NOT the results view)
         // until SignalR reports the next exercise.
         roundTimedOut = true;
-        toastService.ShowInfo("⏰ Time's up! Your answer has been saved.");
+        toastService.ShowInfo("⏰ Time's up! Your answer has been submitted.");
         await InvokeAsync(StateHasChanged);
     }
 
-    private void RecordCurrentAsCompleted()
-    {
-        if (exerciseId == Guid.Empty) return;
-        if (completedExercises.Any(x => x.ExerciseId == exerciseId)) return;
+    private void RecordCurrentAsCompleted() => RecordCompleted(exerciseId, exerciseName);
 
-        completedExercises.Add(new ExerciseResult
+    // Ensures a result slot exists for a specific round. Keyed by round id rather than
+    // by "whatever is current", so a late continuation cannot file one round's work
+    // against another.
+    private ExerciseResult? RecordCompleted(Guid roundId, string? roundName)
+    {
+        if (roundId == Guid.Empty) return null;
+
+        var existing = completedExercises.FirstOrDefault(x => x.ExerciseId == roundId);
+        if (existing != null) return existing;
+
+        // Only ever called for the round that is current on screen, so the category field
+        // still describes this round — the incoming round's is assigned after the capture.
+        var item = new ExerciseResult
         {
-            ExerciseId = exerciseId,
-            Name = exerciseName ?? ""
-        });
+            ExerciseId = roundId,
+            Name = roundName ?? "",
+            Category = exerciseCategory
+        };
+
+        completedExercises.Add(item);
+        return item;
     }
 
     private async Task EndExamAsync()
     {
-        isTimerRunning = false;
+        // Ending is terminal, and several paths can reach it (the last round's timer,
+        // the worker's Ended broadcast, a refresh that sees HasEnded). Re-running it
+        // would re-toast and re-capture for no reason.
+        if (isExamFinished) return;
+
         _timerGeneration++;
         countdownTimer?.Dispose();
 
         // The teacher can end the game while a round is still live on screen;
-        // capture the last diagram before the exercise view unmounts. If the
-        // round already timed out, the answer is captured and the iframe is
+        // capture the last answer before the exercise view unmounts. If the
+        // round already timed out, the answer is captured and the view is
         // gone, so skip it.
         if (gameStarted && !isExamFinished && !roundTimedOut)
-            await CaptureCurrentDiagramAsync();
+            await CaptureCurrentAnswerAsync(exerciseId, exerciseName);
 
         RecordCurrentAsCompleted();
 
@@ -743,6 +944,11 @@
 
         toastService.ShowSuccess("🎉 Exam completed!");
         await InvokeAsync(StateHasChanged);
+
+        // Catch anything whose automatic submission failed mid-game. Loud here: this
+        // is the student's last chance to notice something didn't go through, and the
+        // watchdog keeps retrying behind this.
+        await FlushPendingSubmissionsAsync(silent: false);
     }
 
     // ---------------- UTIL ----------------
@@ -762,17 +968,76 @@
         return client;
     }
 
-    // Pulls the current drawing out of the editor iframe via the postMessage
-    // bridge (diagramInterop.js here, newdiagram.js on the editor side) and
-    // scores it, so the student never has to download and re-upload the JSON.
-    // Must run while the exercise view — and therefore the iframe — is still
-    // rendered.
-    private async Task CaptureCurrentDiagramAsync()
+    // Files the answer for a round, whatever kind of round it is. Every place that ends a
+    // round goes through here: the two problem types capture from completely different
+    // places (a JS round-trip into the editor iframe vs. the textarea already bound to
+    // this circuit), and a path round used to fall through the diagram-only capture with
+    // its answer simply discarded, so it was never submitted and never scored.
+    private async Task CaptureCurrentAnswerAsync(Guid roundId, string? roundName)
     {
-        if (exerciseCategory != "diagram" || exerciseId == Guid.Empty) return;
+        if (exerciseCategory == "diagram")
+        {
+            await CaptureCurrentDiagramAsync(roundId, roundName);
+            return;
+        }
 
-        RecordCurrentAsCompleted();
-        var item = completedExercises.First(x => x.ExerciseId == exerciseId);
+        await CaptureCurrentPathAnswerAsync(roundId, roundName);
+    }
+
+    // Path rounds need no interop: the textarea is bound straight into this circuit, so
+    // the answer is already here. Submitted even when blank — that is a legitimate answer
+    // worth zero, and the teacher should see the attempt rather than nothing at all.
+    private async Task CaptureCurrentPathAnswerAsync(Guid roundId, string? roundName)
+    {
+        if (roundId == Guid.Empty) return;
+
+        var item = RecordCompleted(roundId, roundName);
+        if (item == null) return;
+        if (item.PathAnswers != null) return; // already captured this round
+
+        item.PathAnswers = ParsePathAnswers(pathAnswer);
+
+        await TrySubmitAsync(item, silent: true);
+    }
+
+    private const string PathAnswerPlaceholder = "1 2 5 6 9\n1 2 4 6 9";
+
+    // Keeps the field in step with the box on every keystroke. Nothing renders the value
+    // back, so this is a one-way write and the student's typing is never disturbed.
+    private void OnPathAnswerInput(ChangeEventArgs e) => pathAnswer = e.Value?.ToString();
+
+    // The student writes one path per line (or separated by ';'). Scoring is an exact
+    // string match against the teacher's paths, so runs of whitespace inside a path are
+    // collapsed to single spaces — "1  2 3" and "1 2 3" are the same answer.
+    private static string[] ParsePathAnswers(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<string>();
+
+        return raw
+            .Split(new[] { '\n', '\r', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormalizePathAnswer)
+            .Where(p => p.Length > 0)
+            .ToArray();
+    }
+
+    private static string NormalizePathAnswer(string value) =>
+        string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    // Pulls the drawing for a specific round out of the editor iframe via the
+    // postMessage bridge (diagramInterop.js here, newdiagram.js on the editor side) and
+    // submits it, so the student never has to download and re-upload the JSON. Must run
+    // while the exercise view — and therefore the iframe — is still rendered.
+    //
+    // The round is passed in rather than read from exerciseId: the interop below is an
+    // await, and a refresh can advance the round while it is in flight. The drawing that
+    // comes back belongs to the round we asked for, so that is what it must be filed
+    // against — never against whatever happens to be current when it arrives.
+    private async Task CaptureCurrentDiagramAsync(Guid roundId, string? roundName)
+    {
+        if (exerciseCategory != "diagram" || roundId == Guid.Empty) return;
+
+        var item = RecordCompleted(roundId, roundName);
+        if (item == null) return;
         if (item.SubmissionData != null) return; // already captured this round
 
         string? json;
@@ -789,22 +1054,21 @@
         if (string.IsNullOrWhiteSpace(json))
         {
             toastService.ShowWarning(
-                $"Could not capture the diagram for {item.Name} automatically — you can upload it manually on the submit screen.");
+                $"Could not capture the diagram for {item.Name} automatically — you can upload it on the results screen.");
             return;
         }
 
-        // Normalize and store the answer FIRST so the student can always submit
-        // it, even if the (best-effort, preview-only) scoring below fails.
+        // Store the answer FIRST so it is queued for submission even if the POST
+        // below fails; FlushPendingSubmissionsAsync retries anything left over.
         try
         {
             item.SubmissionData = ExtractDiagramDefinitionFromUpload(json, out var dangling);
             item.DanglingConnectors = dangling;
-            item.Submitted = false;
         }
         catch
         {
             toastService.ShowWarning(
-                $"Could not read the diagram for {item.Name} automatically — you can upload it manually on the submit screen.");
+                $"Could not read the diagram for {item.Name} automatically — you can upload it on the results screen.");
             return;
         }
 
@@ -814,16 +1078,12 @@
             toastService.ShowWarning(
                 $"{item.Name}: {item.DanglingConnectors} arrow(s) weren't attached to a node and were ignored when scoring.");
 
-        // diagramDefinition still holds this exercise's stored (correct)
-        // definition, so scoring needs no extra round-trip. Scoring is only a
-        // preview here; a failure must not derail the round transition, so keep
-        // it silent — the real submission happens at the end of the game.
-        await TryScoreAsync(item, diagramDefinition, silent: true);
+        await TrySubmitAsync(item, silent: true);
     }
 
-    // Manual fallback for the submit screen: only shown when automatic capture
-    // failed. The round is long gone, so the stored (correct) definition has to
-    // be fetched — TryScoreAsync handles that when correctDefinition is null.
+    // Last-resort recovery on the results screen, shown only when nothing could be
+    // captured from the editor. Uploading submits immediately — there is no separate
+    // submit step for the student to remember.
     private async Task UploadFile(InputFileChangeEventArgs e, ExerciseResult item)
     {
         try
@@ -835,144 +1095,114 @@
 
             item.SubmissionData = ExtractDiagramDefinitionFromUpload(inputJson, out var dangling);
             item.DanglingConnectors = dangling;
-            item.Submitted = false;
 
             if (dangling > 0)
                 toastService.ShowWarning(
                     $"{item.Name}: {dangling} arrow(s) aren't attached to a node — reconnect them and re-upload so they count.");
 
-            await TryScoreAsync(item, correctDefinition: null, silent: false);
+            await TrySubmitAsync(item, silent: false);
         }
         catch (Exception ex)
         {
-            toastService.ShowError($"Compare error: {ex.Message}");
+            toastService.ShowError($"Could not read that file: {ex.Message}");
         }
     }
 
-    // Scores an already-captured answer (item.SubmissionData) against the
-    // exercise's stored definition, for the preview shown on the submit screen.
-    // Best-effort: when silent is true (automatic capture) any failure is
-    // swallowed so a scoring hiccup never derails the round transition — the
-    // answer is already stored and can still be submitted at the end.
-    private async Task TryScoreAsync(ExerciseResult item, string? correctDefinition, bool silent)
+    // ---------------- SUBMISSION (automatic) ----------------
+    // Answers are sent as each round closes rather than in one batch at the end, so
+    // the student never has to press anything — and a student who closes the tab
+    // early still has every finished round recorded.
+    //
+    // POST /api/submission scores server-side and returns that score, so this is also
+    // where item.Score comes from; there is no separate preview scoring round-trip.
+    // There is no update endpoint, so an exercise is submitted at most once: a retry
+    // only happens when we know the previous attempt did not succeed.
+
+    // Captured but not yet accepted by the server.
+    private IEnumerable<ExerciseResult> PendingSubmissions =>
+        completedExercises.Where(x => x.HasAnswer && !x.Submitted);
+
+    // Bounds the POST so a hanging API cannot stall a round transition — the capture
+    // happens in the narrow window before the editor iframe is torn down, and the
+    // retry path picks up whatever times out here.
+    private const int SubmitTimeoutMs = 10000;
+
+    private async Task<bool> TrySubmitAsync(ExerciseResult item, bool silent)
     {
+        if (item.Submitted || item.Submitting || !item.HasAnswer) return item.Submitted;
+
+        item.Submitting = true;
+        item.SubmitError = null;
+
         try
         {
             var client = await CreateClientAsync();
 
-            if (string.IsNullOrWhiteSpace(correctDefinition))
+            // The two problem types post different shapes into the same Data field: the
+            // server picks the plugin off the exercise's ProblemType and deserializes
+            // accordingly — a string[] of paths, or the node/connector graph.
+            var payload = new SubmissionCreateRequestDto
             {
-                var exercise = await client.GetFromJsonAsync<DiagramExerciseDto>(
-                    $"/api/exercise/{item.ExerciseId}");
-                correctDefinition = exercise?.Diagram?.Definition;
-            }
-
-            if (string.IsNullOrWhiteSpace(correctDefinition))
-            {
-                if (!silent) toastService.ShowError("Exercise diagram is missing or empty.");
-                return;
-            }
-
-            var payload = new DiagramCompareRequestDto
-            {
-                // The stored definition is already normalized at creation time
-                // (ExerciseCreation uses the same ExtractDiagramDefinitionFromUpload),
-                // so deserialize it directly rather than re-extracting it.
-                Correct = ParseStoredDefinition(correctDefinition),
-                Input = item.SubmissionData!
+                Name = $"Submission for {item.Name}",
+                ExamId = currentGameId,
+                ExerciseId = item.ExerciseId,
+                Data = item.PathAnswers is not null
+                    ? item.PathAnswers
+                    : ToServerDiagramShape(item.SubmissionData!)
             };
 
+            using var cts = new CancellationTokenSource(SubmitTimeoutMs);
+
             var response = await client.PostAsJsonAsync(
-                "/api/diagram/compare",
+                "/api/submission",
                 payload,
-                new JsonSerializerOptions { PropertyNamingPolicy = null }
-            );
+                new JsonSerializerOptions { PropertyNamingPolicy = null },
+                cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
-                if (!silent)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    toastService.ShowError($"Compare API failed: {error}");
-                }
-                return;
+                var error = await response.Content.ReadAsStringAsync();
+                item.SubmitError = $"Submit failed ({(int)response.StatusCode})";
+                if (!silent) toastService.ShowError($"Submit failed for {item.Name}: {error}");
+                return false;
             }
 
-            item.Score = await response.Content.ReadFromJsonAsync<int>();
+            item.Submitted = true;
 
-            if (!silent)
-                toastService.ShowSuccess($"Score for {item.Name}: {item.Score}");
+            // The server evaluates the submission and returns the authoritative score.
+            try
+            {
+                var created = await response.Content.ReadFromJsonAsync<SubmissionResponse>();
+                if (created != null) item.Score = created.Score;
+            }
+            catch
+            {
+                // Recorded fine; we just can't show a score. Not worth surfacing.
+            }
+
+            if (!silent) toastService.ShowSuccess($"Submitted {item.Name}.");
+            return true;
         }
         catch (Exception ex)
         {
-            if (!silent) toastService.ShowError($"Compare error: {ex.Message}");
-        }
-    }
-
-    private async Task SubmitAllAsync()
-    {
-        if (isSubmitting) return;
-
-        var pending = completedExercises
-            .Where(x => x.SubmissionData != null && !x.Submitted)
-            .ToList();
-
-        if (pending.Count == 0)
-        {
-            toastService.ShowWarning("No uploaded files to submit.");
-            return;
-        }
-
-        isSubmitting = true;
-        StateHasChanged();
-
-        try
-        {
-            var client = await CreateClientAsync();
-            var failed = 0;
-
-            foreach (var item in pending)
-            {
-                var payload = new SubmissionCreateRequestDto
-                {
-                    Name = $"Submission for {item.Name}",
-                    ExamId = currentGameId,
-                    ExerciseId = item.ExerciseId,
-                    Data = ToServerDiagramShape(item.SubmissionData!)
-                };
-
-                try
-                {
-                    var response = await client.PostAsJsonAsync(
-                        "/api/submission",
-                        payload,
-                        new JsonSerializerOptions { PropertyNamingPolicy = null });
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var error = await response.Content.ReadAsStringAsync();
-                        toastService.ShowError($"Submit failed for {item.Name}: {error}");
-                        failed++;
-                        continue;
-                    }
-
-                    item.Submitted = true;
-                }
-                catch (Exception ex)
-                {
-                    toastService.ShowError($"Submit error for {item.Name}: {ex.Message}");
-                    failed++;
-                }
-            }
-
-            var submitted = pending.Count - failed;
-            if (submitted > 0)
-                toastService.ShowSuccess($"Submitted {submitted} exercise(s).");
+            item.SubmitError = "Could not reach the server";
+            if (!silent) toastService.ShowError($"Submit error for {item.Name}: {ex.Message}");
+            return false;
         }
         finally
         {
-            isSubmitting = false;
-            StateHasChanged();
+            item.Submitting = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // Retries every answer the server has not accepted yet. Called when the exam ends
+    // and from the watchdog, since the student has no button to fall back on.
+    private async Task FlushPendingSubmissionsAsync(bool silent)
+    {
+        foreach (var item in PendingSubmissions.ToList())
+        {
+            await TrySubmitAsync(item, silent);
         }
     }
 
@@ -992,20 +1222,6 @@
                 Id = c.Id
             }).ToList()
         };
-    }
-
-    // Reads a definition that was already normalized at creation time
-    // (ExerciseCreation stores a serialized DiagramDefinitionDto).
-    private DiagramDefinitionDto ParseStoredDefinition(string rawJson)
-    {
-        if (rawJson.TrimStart().StartsWith("\""))
-        {
-            rawJson = JsonSerializer.Deserialize<string>(rawJson)!;
-        }
-
-        return JsonSerializer.Deserialize<DiagramDefinitionDto>(
-            rawJson,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     }
 
     private DiagramDefinitionDto ExtractDiagramDefinitionFromUpload(string rawJson, out int danglingConnectors)
@@ -1105,9 +1321,9 @@
     // ---------------- LIFECYCLE ----------------
     public async ValueTask DisposeAsync()
     {
-        isTimerRunning = false;
         _timerGeneration++;
         countdownTimer?.Dispose();
+        watchdogTimer?.Dispose();
 
         if (_hub is not null)
         {
@@ -1122,8 +1338,33 @@
         public Guid ExerciseId { get; set; }
         public string Name { get; set; } = "";
         public int? Score { get; set; }
+
+        // The round's category, kept so the results screen can tell what kind of answer
+        // this was after the round itself is long gone.
+        public string? Category { get; set; }
+
+        // A diagram round's answer: the graph pulled out of the editor.
         public DiagramDefinitionDto? SubmissionData { get; set; }
+
+        // A path round's answer: one string per path, which is the shape the server's
+        // PathProblemPlugin deserializes and compares against the teacher's paths.
+        public string[]? PathAnswers { get; set; }
+
+        // Whether there is anything to send. Path answers are legitimately empty when the
+        // student typed nothing, so this cannot be a "not empty" test.
+        public bool HasAnswer => SubmissionData != null || PathAnswers != null;
+
+        // Accepted by the server. Never re-submitted once true — POST /api/submission
+        // creates a new row every time and there is no update endpoint, so a retry
+        // would leave the teacher looking at duplicate answers.
         public bool Submitted { get; set; }
+
+        // A POST is in flight; keeps the round-end submit and a watchdog retry from
+        // racing each other into a duplicate.
+        public bool Submitting { get; set; }
+
+        // Why the last attempt failed, shown on the results screen.
+        public string? SubmitError { get; set; }
 
         // Arrows whose source or target wasn't snapped to a node. These are
         // dropped from the scored graph, so they're surfaced as a warning.
@@ -1169,6 +1410,15 @@
         public bool HasEnded { get; set; }
         public DateTime? DateTimeToNextExercise { get; set; }
         public DateTime? DateTimeToEnd { get; set; }
+
+        // The exercise this snapshot describes; used to detect that the round advanced
+        // between this response and the /exercise one.
+        public Guid? CurrentExerciseId { get; set; }
+
+        // Server-reported round position. IsOnLastExercise tells us outright whether
+        // this round's expiry ends the exam.
+        public int CurrentExerciseIndex { get; set; }
+        public bool IsOnLastExercise { get; set; }
     }
 
     private class GameExerciseResponse
@@ -1188,10 +1438,12 @@
         public string? Definition { get; set; }
     }
 
-    private class DiagramCompareRequestDto
-{
-    public DiagramDefinitionDto Correct { get; set; } = default!;
-    public DiagramDefinitionDto Input { get; set; } = default!;
-}
+    // POST /api/submission response. The server evaluates the answer on create, so
+    // this is the authoritative score — the same one the teacher sees.
+    private class SubmissionResponse
+    {
+        public Guid Id { get; set; }
+        public int Score { get; set; }
+    }
 
 }

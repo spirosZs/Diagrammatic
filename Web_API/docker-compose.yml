@@ -9,6 +9,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      # Must match the worker's SERVICE_API_KEY. Replace outside local development.
+      - ServiceApiKey=local-dev-worker-key
 #      - ASPNETCORE_URLS=https://+:443;http://+:80
 #      - ASPNETCORE_URLS=http://*:$PORT #FOR HEROKU
       - ConnectionStrings__ExercisesContext=Server=db;Database=master;User=sa;Password=fbQ6ll9PQplNs2n;Encrypt=False;TrustServerCertificate=True;
@@ -41,6 +43,8 @@ services:
       dockerfile: Worker/Dockerfile
     environment:
       NODE_ENV: production
+      # Must match the web service's ServiceApiKey.
+      SERVICE_API_KEY: local-dev-worker-key
     ports:
       - "3000:3000"
     depends_on:

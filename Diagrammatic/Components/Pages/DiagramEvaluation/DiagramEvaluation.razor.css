@@ -260,6 +260,13 @@
     margin-bottom: var(--ds-space-2);
 }
 
+.eval-hint {
+    font-size: var(--ds-text-xs);
+    color: var(--ds-text-subtle);
+    margin-top: var(--ds-space-2);
+    margin-bottom: 0;
+}
+
 .eval-score {
     flex: 0 0 auto;
     display: flex;
@@ -413,44 +420,6 @@
     margin-bottom: var(--ds-space-4);
 }
 
-.eval-brief {
-    border-bottom: 1px solid var(--ds-border);
-    background: var(--ds-surface-alt);
-    padding: var(--ds-space-3) var(--ds-space-4);
-    font-size: var(--ds-text-sm);
-}
-
-.eval-brief > summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--ds-text-muted);
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: var(--ds-space-2);
-}
-
-.eval-brief > summary::-webkit-details-marker {
-    display: none;
-}
-
-.eval-brief > summary::before {
-    content: "▸";
-    transition: transform var(--ds-duration-fast) var(--ds-ease);
-}
-
-.eval-brief[open] > summary::before {
-    transform: rotate(90deg);
-}
-
-.eval-brief > p {
-    margin: var(--ds-space-2) 0 0;
-    color: var(--ds-text-muted);
-    max-height: 30vh;
-    overflow-y: auto;
-    overflow-wrap: anywhere;
-}
-
 /* The editor itself. Height is driven here (not by an iframe attribute) so it
    can follow the viewport instead of a hard-coded 600px. */
 .eval-frame {
@@ -489,11 +458,6 @@
     height: auto;
     min-height: 0;
     max-height: none;
-}
-
-.eval-stage.is-expanded .eval-brief {
-    max-height: 22vh;
-    overflow-y: auto;
 }
 
 /* ---------- Path exercises ---------- */

@@ -28,6 +28,17 @@ namespace Exercises.Core.Helpers
         public static T GetDataObject<T>(this Submission submission)
         {
             var data = submission.Data;
+
+            // Clients that send `data` as a JSON *string* rather than an object leave the
+            // payload double-encoded, so the stored value is a quoted blob and
+            // Deserialize<T> failed at the root with an unhandled JsonException — a 500 for
+            // what is really a malformed request. Unwrap one layer, the same way
+            // ParseDiagramDefinition already does.
+            if (data != null && data.TrimStart().StartsWith("\""))
+            {
+                data = JsonSerializer.Deserialize<string>(data) ?? data;
+            }
+
             return JsonSerializer.Deserialize<T>(data, DataDeserializerOptions);
         }
 

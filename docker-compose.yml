@@ -1,0 +1,106 @@
+# Full stack: Blazor app + Exercises API + timer worker + SQL Server.
+#
+# Web_API/docker-compose.yml is left alone — it is the Visual Studio compose project used
+# for F5 debugging of the API on its own. This file is the deployable one: it builds the
+# same API image plus the Blazor front end, and drops the dev-only bits (Windows user-secret
+# mounts, the debug port, an unpersisted database).
+#
+#   docker compose up --build
+#
+# Copy .env.example to .env and change the secrets before putting this anywhere real.
+
+services:
+  db:
+    image: "mcr.microsoft.com/mssql/server:2017-latest-ubuntu"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD:-fbQ6ll9PQplNs2n}"
+      MSSQL_PID: Express
+    ports:
+      - "${DB_PORT:-3314}:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${SA_PASSWORD:-fbQ6ll9PQplNs2n}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # The Exercises API. Runs EF migrations and seeding on startup, so it must not come up
+  # before SQL Server is answering queries.
+  web:
+    image: diagrammatic-api
+    build:
+      context: ./Web_API
+      dockerfile: Exercises/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:8080
+      # Must match the worker's SERVICE_API_KEY.
+      - ServiceApiKey=${SERVICE_API_KEY:-local-dev-worker-key}
+      - JwtSettings__Secret=${JWT_SECRET:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+      - ConnectionStrings__ExercisesContext=Server=db;Database=master;User=sa;Password=${SA_PASSWORD:-fbQ6ll9PQplNs2n};Encrypt=False;TrustServerCertificate=True;
+    volumes:
+      # Without this the data protection keys are regenerated on every restart, invalidating
+      # antiforgery tokens on the Razor pages the diagram editor is served from.
+      - api-dataprotection:/root/.aspnet/DataProtection-Keys
+    ports:
+      # Published because the browser loads the diagram editor iframe straight from the API.
+      # Keep in step with APP_PUBLIC_API_URL below.
+      - "${API_PORT:-8083}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Timer worker. Drives round countdowns over the game hub using the shared service key.
+  worker:
+    image: diagrammatic-worker
+    build:
+      context: ./Web_API
+      dockerfile: Worker/Dockerfile
+    environment:
+      NODE_ENV: production
+      # Must match the web service's ServiceApiKey.
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-local-dev-worker-key}
+    ports:
+      - "${WORKER_PORT:-3000}:3000"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # Blazor Server front end.
+  app:
+    image: diagrammatic-app
+    build:
+      context: ./Diagrammatic
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:8080
+      # Server-side calls (HttpClient, SignalR) go over the compose network.
+      - Api__InternalBaseUrl=http://web:8080
+      # The iframe URL is resolved by the student's browser, so it needs an address the
+      # browser can reach: the API's published port locally, the public host once deployed.
+      - Api__PublicBaseUrl=${APP_PUBLIC_API_URL:-http://localhost:8083}
+    volumes:
+      # Blazor Server signs its antiforgery tokens with these keys. Regenerating them on
+      # every restart logs everyone out and breaks in-flight form posts.
+      - app-dataprotection:/root/.aspnet/DataProtection-Keys
+      # Diagram images uploaded on the exercise creation form land in wwwroot/DiagramPhotos and
+      # are served from there. Inside the image that directory is part of the build output, so
+      # without this volume every rebuild wipes the uploads and old path exercises lose their
+      # picture.
+      - app-diagramphotos:/app/wwwroot/DiagramPhotos
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  mssql-data:
+  api-dataprotection:
+  app-dataprotection:
+  app-diagramphotos:

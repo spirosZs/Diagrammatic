@@ -11,6 +11,7 @@
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject IOptions<ApiOptions> ApiOptions
 @inherits LayoutComponentBase
 @implements IAsyncDisposable
 @attribute [StreamRendering]
@@ -83,6 +84,48 @@
                 <li><strong>Weight:</strong> @_currentExercise.Weight</li>
                 <li><strong>Time To Complete (s):</strong> @_currentExercise.TimeToComplete</li>
             </ul>
+
+            @* The definition used to sit above the student's editor; it lives here now,
+               for the teacher to present to the class. It follows the round, because
+               LoadCurrentExerciseAsync re-runs on every round-change event.
+
+               The two exercise kinds keep that text in different fields. Diagram exercises
+               put it in Diagram.Url (the "Definition" box on the creation form writes
+               there) and Diagram.Definition holds the solution graph json. Path exercises
+               are the other way round: Definition is the text and Url is the image the
+               student is asked to trace, so show the picture here too — the teacher is
+               talking the class through it. *@
+            @if (_currentExercise.Category == "diagram"
+                 && !string.IsNullOrWhiteSpace(_currentExercise.Diagram?.Url))
+            {
+                <div class="alert alert-info mb-0">
+                    <div class="text-uppercase small fw-bold mb-1">Exercise definition</div>
+                    <div>@_currentExercise.Diagram.Url</div>
+                </div>
+            }
+            else if (_currentExercise.Category == "path" && _currentExercise.Diagram != null)
+            {
+                @if (!string.IsNullOrWhiteSpace(_currentExercise.Diagram.Definition))
+                {
+                    <div class="alert alert-info">
+                        <div class="text-uppercase small fw-bold mb-1">Exercise definition</div>
+                        <div>@_currentExercise.Diagram.Definition</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_currentExercise.Diagram.Url))
+                {
+                    @* Sized by max-width/max-height with both dimensions left auto, so the
+                       browser scales it down whole and the aspect ratio survives. Bootstrap's
+                       img-fluid pins width to 100%, and a max-height on top of that clamped
+                       the height without shrinking the width — which squashed the diagram's
+                       circles into ellipses. *@
+                    <img src="@_currentExercise.Diagram.Url"
+                         class="border rounded d-block mx-auto"
+                         style="max-width:100%; max-height:60vh; width:auto; height:auto; object-fit:contain;"
+                         alt="Exercise diagram" />
+                }
+            }
         }
         else if (!string.IsNullOrEmpty(_exerciseErrorMessage))
         {
@@ -149,16 +192,7 @@
             var httpClient = await CreateClientAsync();
             if (httpClient == null) return;
 
-            var response = await httpClient.GetAsync("/api/exam");
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                _examCollection = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ExamDto>>(json) ?? new();
-            }
-            else
-            {
-                _errorMessage = "Failed to load exams.";
-            }
+            _examCollection = await httpClient.GetAllPagesAsync<ExamDto>("/api/exam");
         }
         catch (Exception ex)
         {
@@ -278,7 +312,7 @@
         var token = await SessionStorage.GetItemAsync<string>("authToken");
 
         _hub = new HubConnectionBuilder()
-            .WithUrl("http://localhost:8083/gameHub", options =>
+            .WithUrl(ApiOptions.Value.HubUrl, options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult<string?>(token);
             })

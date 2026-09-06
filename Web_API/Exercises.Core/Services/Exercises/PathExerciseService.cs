@@ -18,6 +18,7 @@ namespace Exercises.Core.Services
         protected override void OnBeforeCreate(PathExercise resource)
         {
             base.OnBeforeCreate(resource);
+            resource.StampOwnedDiagram(resource.Diagram);
             _context.AddExerciseToReferencedCollection(resource);
         }
     }

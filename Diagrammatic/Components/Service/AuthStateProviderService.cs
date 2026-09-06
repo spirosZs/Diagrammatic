@@ -41,6 +41,8 @@ public class AuthStateProviderService : AuthenticationStateProvider
     public async Task MarkUserAsLoggedOut()
     {
         await _sessionStorage.RemoveItemAsync("authToken");
+        // Logging out must not leave a usable refresh token behind in the browser.
+        await _sessionStorage.RemoveItemAsync("refreshToken");
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_anonymous)));
     }
 

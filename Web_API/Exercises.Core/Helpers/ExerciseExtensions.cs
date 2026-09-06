@@ -48,6 +48,30 @@ namespace Exercises.Core.Helpers
             collection.Exercises.Add(exercise);
         }
 
+        /// <summary>
+        /// Gives a diagram posted inline with its exercise the same owner as the exercise.
+        /// </summary>
+        /// <remarks>
+        /// Only the top-level entity gets stamped by ResourceBase.OnBeforeCreate, so a
+        /// nested Diagram reached SaveChanges owned by Guid.Empty and the insert was
+        /// rejected by FK_Diagrams_AspNetUsers_UserId — posting an exercise with its
+        /// diagram inline always failed with a 500. An exercise that references an existing
+        /// diagram by id has no navigation loaded, so this leaves it alone.
+        /// </remarks>
+        public static void StampOwnedDiagram(this Exercise exercise, Diagram diagram)
+        {
+            if (diagram == null || diagram.UserId != Guid.Empty)
+            {
+                return;
+            }
+
+            diagram.UserId = exercise.UserId;
+            if (diagram.Created == default)
+            {
+                diagram.Created = exercise.Created;
+            }
+        }
+
 
         //QUERY EXTENSIONS
         public static IQueryable<TResource> ApplyResourceFilters<TResource, TFilter>(this IQueryable<TResource> query,

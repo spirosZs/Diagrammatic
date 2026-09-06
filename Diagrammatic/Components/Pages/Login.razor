@@ -79,6 +79,9 @@
             if (authSuccessResponse == null) return;
 
             await SessionStorage.SetItemAsync("authToken", authSuccessResponse.Token);
+            // Stored alongside the access token so RefreshService writes both keys back
+            // to the same place the rest of the app reads them from.
+            await SessionStorage.SetItemAsync("refreshToken", authSuccessResponse.RefreshToken);
             RefreshService.SetTokens(authSuccessResponse.Token, authSuccessResponse.RefreshToken);
 
             var authProvider = (AuthStateProviderService)AuthenticationStateProvider;

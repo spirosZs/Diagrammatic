@@ -48,5 +48,25 @@ namespace Exercises.Common.Exam.Game
         /// Date the game will proceed to the next exercise.
         /// </summary>
         public DateTime? DateTimeToNextExercise { get; set; }
+
+        /// <summary>
+        /// The exercise this info describes. Clients that read the deadline here and the
+        /// exercise from GET /api/game/{id}/exercise must check the two agree — the round
+        /// can advance between the two requests, and a deadline paired with the wrong
+        /// exercise reads as "already expired".
+        /// </summary>
+        public Guid? CurrentExerciseId { get; set; }
+
+        /// <summary>
+        /// Zero-based position of the current round, or -1 when no round is active.
+        /// </summary>
+        public int CurrentExerciseIndex { get; set; }
+
+        /// <summary>
+        /// True when the current round is the last one of the exam, so its expiry ends
+        /// the game instead of advancing to another exercise. Clients should prefer this
+        /// over comparing DateTimeToNextExercise with DateTimeToEnd.
+        /// </summary>
+        public bool IsOnLastExercise { get; set; }
     }
 }

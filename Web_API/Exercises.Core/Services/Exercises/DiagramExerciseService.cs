@@ -20,6 +20,7 @@ namespace Exercises.Core.Services
         protected override void OnBeforeCreate(DiagramExercise diagramExercise)
         {
             base.OnBeforeCreate(diagramExercise);
+            diagramExercise.StampOwnedDiagram(diagramExercise.Diagram);
             _context
                 .AddExerciseToReferencedCollection(diagramExercise);
         }

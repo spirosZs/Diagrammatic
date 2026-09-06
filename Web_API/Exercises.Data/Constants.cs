@@ -13,5 +13,18 @@ namespace Exercises.Data
         public const string ROLE_ADMIN = "Admin";
         public const string ROLE_TEACHER = "Teacher";
         public const string ROLE_STUDENT = "Student";
+
+        /// <summary>
+        /// Not a user role: the identity given to the timer worker when it presents the
+        /// shared service key. It may drive game progression for any exam, which is why
+        /// it is never granted to anyone who signs in.
+        /// </summary>
+        public const string ROLE_SERVICE = "Service";
+
+        /// <summary>
+        /// Authorization policy guarding the game hub. Declared here so the hub (in
+        /// Exercises.Core) and the policy registration (in the web project) cannot drift.
+        /// </summary>
+        public const string POLICY_GAME_HUB = "GameHubAccess";
     }
 }
