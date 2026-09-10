@@ -7,18 +7,22 @@
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @attribute [Authorize(Roles = "Teacher")]
 
-<h3>Student Submissions</h3>
+<h3>Submissions by Exercise</h3>
+<p class="text-muted">
+    Search for an exercise to see every student's submission for it, ranked from the highest score down.
+</p>
 
 <div class="row mb-3">
     <div class="col-md-8">
-        <label for="studentName" class="form-label">Student Name</label>
+        <label for="exerciseName" class="form-label">Exercise Name</label>
         <div class="input-group">
             <span class="input-group-text">Submission for</span>
-            <input id="studentName" class="form-control" @bind="_studentName" placeholder="Enter Exercise Name" />
+            <input id="exerciseName" class="form-control" @bind="_exerciseName" placeholder="Enter exercise name" />
             <button class="btn btn-primary" type="button" @onclick="SearchAsync" disabled="@_isLoading">
                 @(_isLoading ? "Searching..." : "Search")
             </button>
         </div>
+        <div class="form-text">Submissions are stored as "Submission for &lt;exercise name&gt;", so a partial name matches too.</div>
     </div>
 </div>
 
@@ -28,10 +32,12 @@
 }
 else if (_searched && _rows.Count == 0)
 {
-    <div class="alert alert-info">No submissions found for "Submission for @_lastQuery".</div>
+    <div class="alert alert-info">No submissions found for exercise "@_lastQuery".</div>
 }
 else if (_rows.Count > 0)
 {
+    <p class="text-muted">@_rows.Count submission(s) for "@_lastQuery".</p>
+
     <table class="table table-striped">
         <thead>
             <tr>
@@ -56,18 +62,24 @@ else if (_rows.Count > 0)
 }
 
 @code {
-    private string _studentName = string.Empty;
+    private string _exerciseName = string.Empty;
     private string _lastQuery = string.Empty;
     private bool _isLoading;
     private bool _searched;
     private List<SubmissionRowDto> _rows = new();
     private readonly Dictionary<Guid, string> _exerciseNameCache = new();
 
+    // The API caps a page at 20 items and defaults to 10 (PaginationFilter), so a single
+    // request would silently drop most of a class. Walk the pages instead; MaxPages keeps
+    // a runaway loop bounded, and the X-Pagination header tells us when we have them all.
+    private const int PageSize = 20;
+    private const int MaxPages = 50;
+
     private async Task SearchAsync()
     {
-        if (string.IsNullOrWhiteSpace(_studentName))
+        if (string.IsNullOrWhiteSpace(_exerciseName))
         {
-            toastService.ShowWarning("Please enter a student name to search.");
+            toastService.ShowWarning("Please enter an exercise name to search.");
             return;
         }
 
@@ -89,22 +101,57 @@ else if (_rows.Count > 0)
             httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var nameFilter = $"Submission for {_studentName.Trim()}";
-            _lastQuery = _studentName.Trim();
+            // The submission's Name is written by the student's client as
+            // "Submission for <exercise name>", and the API filters Name by prefix — so
+            // this searches by exercise, which is what the page has always actually done.
+            var nameFilter = $"Submission for {_exerciseName.Trim()}";
+            _lastQuery = _exerciseName.Trim();
 
-            var requestUrl = $"/api/submission?Name={Uri.EscapeDataString(nameFilter)}";
-            var response = await httpClient.GetAsync(requestUrl);
+            var submissions = new List<SubmissionDto>();
+            var seen = new HashSet<Guid>();
+            int? totalCount = null;
 
-            if (!response.IsSuccessStatusCode)
+            for (var page = 1; page <= MaxPages; page++)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                toastService.ShowError($"Failed to load submissions: {response.StatusCode}");
-                return;
+                // Paged with OrderBy=Id, NOT by score. The server pages with Skip/Take over
+                // a fresh query per page, so the sort key has to be unique — rows tied on it
+                // can otherwise repeat on one page and go missing from another, and scores
+                // tie constantly (a whole class can share a 0). Id is the primary key, so
+                // the order is total and every submission comes back exactly once. Ranking
+                // by score happens below, once the full set is in hand.
+                var requestUrl = $"/api/submission?Name={Uri.EscapeDataString(nameFilter)}" +
+                                 $"&OrderBy=Id&PageSize={PageSize}&PageNumber={page}";
+
+                var response = await httpClient.GetAsync(requestUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    toastService.ShowError($"Failed to load submissions: {response.StatusCode}");
+                    return;
+                }
+
+                totalCount ??= ReadTotalCount(response);
+
+                var json = await response.Content.ReadAsStringAsync();
+                var batch = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SubmissionDto>>(json)
+                            ?? new List<SubmissionDto>();
+
+                foreach (var submission in batch)
+                {
+                    if (seen.Add(submission.Id)) submissions.Add(submission);
+                }
+
+                if (batch.Count < PageSize) break;
+                if (totalCount.HasValue && submissions.Count >= totalCount.Value) break;
             }
 
-            var json = await response.Content.ReadAsStringAsync();
-            var submissions = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SubmissionDto>>(json)
-                              ?? new List<SubmissionDto>();
+            // Only reachable past MaxPages * PageSize submissions for one exercise. Say so
+            // rather than quietly showing a partial class list.
+            if (totalCount.HasValue && submissions.Count < totalCount.Value)
+            {
+                toastService.ShowWarning(
+                    $"Showing {submissions.Count} of {totalCount.Value} submissions — narrow the exercise name to see the rest.");
+            }
 
             foreach (var submission in submissions)
             {
@@ -117,6 +164,12 @@ else if (_rows.Count > 0)
                     Date = submission.Created
                 });
             }
+
+            // Highest score first; equal scores read alphabetically so the order is stable.
+            _rows = _rows
+                .OrderByDescending(r => r.Score)
+                .ThenBy(r => r.StudentName)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -126,6 +179,23 @@ else if (_rows.Count > 0)
         {
             _isLoading = false;
             _searched = true;
+        }
+    }
+
+    // The API reports the unpaged total in an X-Pagination header (PaginationMeta), which
+    // is how we know whether the page walk above actually reached the end.
+    private static int? ReadTotalCount(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("X-Pagination", out var values)) return null;
+
+        try
+        {
+            var meta = Newtonsoft.Json.Linq.JObject.Parse(values.First());
+            return meta.Value<int?>("TotalCount");
+        }
+        catch
+        {
+            return null; // header missing or malformed — fall back to the short-page check
         }
     }
 

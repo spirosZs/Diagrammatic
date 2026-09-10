@@ -490,6 +490,33 @@ label {
     margin-bottom: var(--ds-space-6);
 }
 
+/* Password rules listed under the password box on the sign-up forms. */
+.ds-auth-hint {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--ds-space-1);
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+}
+
+.ds-auth-hint li {
+    position: relative;
+    padding-left: var(--ds-space-4);
+    line-height: 1.5;
+}
+
+.ds-auth-hint li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--ds-text-muted);
+    opacity: 0.7;
+}
+
 .ds-auth-divider {
     border: none;
     border-top: 1px solid var(--ds-border);

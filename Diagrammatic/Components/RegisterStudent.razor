@@ -32,7 +32,7 @@
                 <ValidationMessage For="@(() => registrationModel.email)" class="validation-message" />
             </div>
 
-            <div class="form-floating mb-4">
+            <div class="form-floating mb-2">
                 <InputText id="password"
                            type="password"
                            @bind-Value="registrationModel.password"
@@ -41,6 +41,24 @@
                            placeholder="password" />
                 <label for="password">Password</label>
                 <ValidationMessage For="@(() => registrationModel.password)" class="validation-message" />
+            </div>
+
+            <ul class="ds-auth-hint mb-3">
+                <li>At least 8 characters long</li>
+                <li>An uppercase and a lowercase letter</li>
+                <li>A number</li>
+                <li>A special character (for example ! ? @@ #)</li>
+            </ul>
+
+            <div class="form-floating mb-4">
+                <InputText id="confirmPassword"
+                           type="password"
+                           @bind-Value="registrationModel.confirmPassword"
+                           class="form-control"
+                           autocomplete="new-password"
+                           placeholder="confirm password" />
+                <label for="confirmPassword">Confirm password</label>
+                <ValidationMessage For="@(() => registrationModel.confirmPassword)" class="validation-message" />
             </div>
 
             <div class="text-center mb-4">
@@ -72,6 +90,8 @@
         registrationModel.role = "Student";
     }
 
+    // Only reached once the form validates, so the password already meets the advertised
+    // rule and matches its confirmation.
     private async Task RegisterUser()
     {
         try
