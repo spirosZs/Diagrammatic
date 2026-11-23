@@ -1,0 +1,19 @@
+/* The embedded diagram editor. It is an iframe, so it only gets the height this
+   page gives it — a short box turns the canvas into a postage stamp. */
+.exercise-diagram-frame {
+    position: relative;
+    height: 60vh;
+    min-height: 320px;
+    max-height: 780px;
+    background: var(--ds-surface-alt);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    overflow: hidden;
+}
+
+.exercise-diagram-frame iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}

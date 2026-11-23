@@ -8,6 +8,8 @@ using Exercises.Common.Exam;
 using Exercises.Common.Exam.Game;
 using Exercises.Common.Exercise;
 using Exercises.Core.Helpers;
+using Exercises.Data;
+using Exercises.Data.Types;
 using Exercises.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -120,12 +122,38 @@ namespace Exercises.Controllers
                 }
 
                 var mappedExercise = Mapper.Map<ExerciseDto>(exercise);
+                WithholdSolutionFromStudents(mappedExercise);
                 return Ok(mappedExercise);
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message, type = ex.GetType().Name });
             }
+        }
+
+        /// <summary>
+        /// Blanks the answer a student is about to be asked for.
+        /// </summary>
+        /// <remarks>
+        /// A diagram exercise keeps the teacher's solution graph in Diagram.Definition, and
+        /// the round's exercise is sent to everyone playing — so the answer was sitting in
+        /// the student's own network tab while they were being timed on drawing it. Nothing
+        /// on their screen uses the field (the drawing they are compared against is never
+        /// shown to them), so it is dropped on the way out. Scoring is unaffected: it
+        /// happens server-side against the stored diagram, not against anything the client
+        /// sends back.
+        ///
+        /// A path exercise is left alone — there Definition is the question text the class
+        /// reads, and its answer lives in Paths, which this DTO never carries.
+        /// </remarks>
+        private void WithholdSolutionFromStudents(ExerciseDto exercise)
+        {
+            if (exercise?.Diagram == null) return;
+            if (User.IsInRole(Constants.ROLE_TEACHER) || User.IsInRole(Constants.ROLE_ADMIN)) return;
+            if (!string.Equals(exercise.ProblemType, ProblemType.Diagram.ToString(),
+                    StringComparison.OrdinalIgnoreCase)) return;
+
+            exercise.Diagram.Definition = string.Empty;
         }
 
         /// <summary>

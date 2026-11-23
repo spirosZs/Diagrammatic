@@ -218,6 +218,38 @@ body > .container-fluid {
     -webkit-overflow-scrolling: touch;
 }
 
+/* Step prompt while an arrow is being made ("tap the shape it starts from",
+   then "now tap the shape it points to").
+
+   Pinned over the canvas, not in the shape tray: .dg-hint down there is
+   display:none below 900px, and the phone is where the instruction is needed.
+   pointer-events:none so it can never swallow one of the two taps it is asking
+   for -- it sits directly in the line of fire at the top of the canvas. */
+.dg-connect-hint {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    max-width: calc(100% - 20px);
+    margin: 0;
+    padding: 8px 14px;
+    border: 1px solid var(--dg-accent-border);
+    border-radius: 999px;
+    background: var(--dg-accent-soft);
+    color: var(--dg-accent);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    box-shadow: var(--dg-shadow-md);
+    pointer-events: none;
+}
+
+.dg-connect-hint[hidden] {
+    display: none;
+}
+
 .dg-hint {
     display: none;
     margin: 10px 2px 0;

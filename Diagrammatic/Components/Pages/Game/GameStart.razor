@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
 @inject IOptions<ApiOptions> ApiOptions
+@inject IJSRuntime JS
 @inherits LayoutComponentBase
 @implements IAsyncDisposable
 @attribute [StreamRendering]
@@ -26,17 +27,27 @@
         <form @onsubmit="OpenLobbyAsync">
             <div class="form-group">
                 <label for="examId">Game ID</label>
+                @* Only exams that have never been played are listed — see
+                   loadExamCollection. The option carries the exam's id rather than its
+                   name: names are not unique (re-making an exam for a second run is the
+                   normal way to repeat one), and picking by name could open the lobby on
+                   a different exam than the one on screen. *@
                 <select id="examId" class="form-control" @onchange="OnExamSelected">
                     <option value="">-- Select --</option>
-                    @if (_examCollection != null)
+                    @foreach (var exam in _examCollection)
                     {
-                        @foreach (var collection in _examCollection)
-                        {
-                            <option>@collection.Name</option>
-                        }
+                        <option value="@exam.Id">@exam.Name</option>
                     }
                 </select>
             </div>
+
+            @if (_examsLoaded && !_examCollection.Any())
+            {
+                <div class="alert alert-info mt-2 mb-0">
+                    Every exam you have has already been played. Create a new one to run
+                    another game — a game can only be started once.
+                </div>
+            }
 
             <br />
             <button type="submit" class="btn btn-primary" disabled="@(_selectedExamId == Guid.Empty)">Open Lobby</button>
@@ -92,9 +103,9 @@
                The two exercise kinds keep that text in different fields. Diagram exercises
                put it in Diagram.Url (the "Definition" box on the creation form writes
                there) and Diagram.Definition holds the solution graph json. Path exercises
-               are the other way round: Definition is the text and Url is the image the
-               student is asked to trace, so show the picture here too — the teacher is
-               talking the class through it. *@
+               are the other way round: Definition is the text and Url is the diagram the
+               class reads their paths off, so show that here too — the teacher is talking
+               them through it while they answer. *@
             @if (_currentExercise.Category == "diagram"
                  && !string.IsNullOrWhiteSpace(_currentExercise.Diagram?.Url))
             {
@@ -113,9 +124,26 @@
                     </div>
                 }
 
-                @if (!string.IsNullOrWhiteSpace(_currentExercise.Diagram.Url))
+                @if (HasDrawnPathDiagram)
                 {
-                    @* Sized by max-width/max-height with both dimensions left auto, so the
+                    @* The same diagram the class has in front of them, in the same viewer
+                       (?readOnly=true) — the teacher is presenting from this, so it must
+                       not be something they can nudge out of shape mid-round. @key ties it
+                       to the round so the next exercise gets a fresh frame rather than the
+                       previous drawing. *@
+                    <div class="game-diagram-frame">
+                        <iframe id="gamePathDiagramFrame"
+                                @key="_currentExercise.Id"
+                                title="Exercise diagram"
+                                src="@ApiOptions.Value.DiagramViewerUrl"></iframe>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_currentExercise.Diagram.Url))
+                {
+                    @* Exercises made before diagrams were drawn in the editor point at an
+                       uploaded image instead.
+
+                       Sized by max-width/max-height with both dimensions left auto, so the
                        browser scales it down whole and the aspect ratio survives. Bootstrap's
                        img-fluid pins width to 100%, and a max-height on top of that clamped
                        the height without shrinking the width — which squashed the diagram's
@@ -149,6 +177,10 @@
     private GameExerciseDto? _currentExercise;
     private string _exerciseErrorMessage = "";
     private List<ExamDto> _examCollection = new(); // Initialized to avoid null errors
+
+    // Tells an empty list apart from one that has not been fetched yet, so the "nothing
+    // left to play" note does not flash up while the request is still out.
+    private bool _examsLoaded;
     private string _errorMessage = "";
 
     // Lobby state
@@ -183,6 +215,41 @@
             // 3. Update UI
             StateHasChanged();
         }
+
+        // The round's diagram can only be pushed into the viewer once this render has
+        // put the iframe on the page. Repeating the call is cheap — it returns straight
+        // away when that frame already holds this round's drawing — so it runs after
+        // every render rather than being tracked separately.
+        await LoadPathDiagramAsync();
+    }
+
+    // ---------------- PATH EXERCISE DIAGRAM ----------------
+
+    // A path exercise's diagram lives in Diagram.Url. Anything drawn in the creation
+    // form is the editor's canvas json and goes into the locked viewer; exercises made
+    // back when the teacher uploaded a .png hold "/DiagramPhotos/..." there instead and
+    // are still shown as an image.
+    private bool HasDrawnPathDiagram =>
+        _currentExercise?.Diagram?.Url is { } url && url.TrimStart().StartsWith("{");
+
+    private async Task LoadPathDiagramAsync()
+    {
+        if (!_started || _currentExercise is null) return;
+        if (_currentExercise.Category != "path" || !HasDrawnPathDiagram) return;
+
+        try
+        {
+            await JS.InvokeAsync<bool>(
+                "diagramInterop.loadDiagram",
+                "gamePathDiagramFrame",
+                _currentExercise.Diagram.Url,
+                _currentExercise.Id.ToString(),
+                15000);
+        }
+        catch
+        {
+            // Interop hiccup; the next round-change event renders again and retries.
+        }
     }
 
     private async Task loadExamCollection()
@@ -192,7 +259,17 @@
             var httpClient = await CreateClientAsync();
             if (httpClient == null) return;
 
-            _examCollection = await httpClient.GetAllPagesAsync<ExamDto>("/api/exam");
+            var exams = await httpClient.GetAllPagesAsync<ExamDto>("/api/exam");
+
+            // Only the ones that can still be played. Starting a game stamps DateStarted
+            // and the server refuses to start the same exam twice ("Game already
+            // started"), so an exam that has run — finished or still in progress — is in
+            // this list purely to be picked by mistake.
+            _examCollection = exams
+                .Where(exam => exam.DateStarted is null)
+                .ToList();
+
+            _examsLoaded = true;
         }
         catch (Exception ex)
         {
@@ -202,11 +279,11 @@
 
     private void OnExamSelected(ChangeEventArgs e)
     {
-        var selectedName = e.Value?.ToString();
+        var selectedId = e.Value?.ToString();
 
-        if (!string.IsNullOrEmpty(selectedName))
+        if (!string.IsNullOrEmpty(selectedId) && Guid.TryParse(selectedId, out var examId))
         {
-            var selectedExam = _examCollection.FirstOrDefault(c => c.Name == selectedName);
+            var selectedExam = _examCollection.FirstOrDefault(exam => exam.Id == examId);
             if (selectedExam != null)
             {
                 _selectedExam = selectedExam;

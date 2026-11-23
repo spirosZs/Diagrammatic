@@ -126,17 +126,17 @@
                                 <p class="eval-error">@item.SubmitError — retrying automatically.</p>
                             }
 
-                            @* Last-resort recovery: only when nothing could be captured
-                               from the editor. Uploading sends the answer straight away —
-                               there is no separate submit step. A path answer is typed, not
-                               captured, so it can never land here and the JSON upload would
-                               make no sense for it. *@
+                            @* There is no upload-your-file recovery here any more. It relied
+                               on the student having saved the diagram to disk during the
+                               round, and the editor no longer offers that — the drawing is
+                               read straight off the canvas instead. A capture that fails is
+                               now reported as what it is. *@
                             @if (!item.HasAnswer && item.Category == "diagram")
                             {
-                                <div class="eval-upload">
-                                    <label class="eval-upload-label">Upload your saved diagram JSON instead</label>
-                                    <InputFile OnChange="e => UploadFile(e, item)" class="form-control form-control-sm" />
-                                </div>
+                                <p class="eval-hint">
+                                    Nothing could be read from the canvas for this one. Tell your
+                                    teacher — they can see it was not submitted.
+                                </p>
                             }
                         </div>
 
@@ -235,9 +235,37 @@
                 <p class="eval-lead">@diagramDefinition</p>
             }
 
-            @* The exercise image is deliberately NOT shown here. It lives on the teacher's
-               live view (GameStart.razor), which is what the class is looking at, the same
-               way a diagram exercise's definition does. *@
+            @* The diagram the paths are read off. It is the same editor the student draws
+               answers in, served as a viewer (?readOnly=true — no toolbar, no shape tray,
+               a canvas that cannot be edited), with the teacher's drawing pushed into it
+               over the postMessage bridge from OnAfterRenderAsync.
+
+               @key ties the element to the round: a path round that follows another one
+               would otherwise reuse the iframe, and the previous exercise's diagram would
+               still be on the canvas while the new one is being sent to it. *@
+            @if (HasDrawnPathDiagram)
+            {
+                <div class="eval-frame eval-frame--viewer">
+                    <iframe id="pathDiagramFrame"
+                            @key="exerciseId"
+                            title="Exercise diagram"
+                            src="@ApiOptions.Value.DiagramViewerUrl"></iframe>
+                </div>
+
+                @* An empty canvas reads as "this exercise has no diagram", which is the
+                   wrong thing to conclude while one is still on its way. Said until the
+                   viewer confirms it has the drawing. *@
+                @if (_pathDiagramToLoad is not null)
+                {
+                    <p class="eval-hint">Loading the exercise diagram…</p>
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(pathDiagramUrl))
+            {
+                @* Exercises made before diagrams were drawn in the editor point at an
+                   uploaded image instead. *@
+                <img src="@pathDiagramUrl" class="eval-figure" alt="Exercise diagram" />
+            }
 
             @* Scoring is an exact match of each line against the teacher's paths, so the
                expected shape has to be spelled out — a student who writes prose here
@@ -322,6 +350,23 @@
     private string? diagramDefinition; // path: question/lead text
     private string? pathAnswer;
 
+    // A path exercise's diagram, straight off Diagram.Url. Two shapes live in that
+    // field: the editor's canvas json for anything drawn in the creation form, and a
+    // "/DiagramPhotos/..." image path on exercises made when the teacher uploaded a
+    // .png. The json is loaded into the locked editor below; the image is just shown.
+    private string? pathDiagramUrl;
+
+    private bool HasDrawnPathDiagram =>
+        pathDiagramUrl is not null && pathDiagramUrl.TrimStart().StartsWith("{");
+
+    // Set when a round brings a drawing that still has to be pushed into the iframe,
+    // and cleared only once the viewer confirms it. The transfer itself happens in
+    // OnAfterRenderAsync: the element has to exist before anything can be posted to
+    // it, and at the point the round is read it does not yet.
+    private string? _pathDiagramToLoad;
+    private bool _pathDiagramLoading;
+    private bool _pathDiagramWarned;
+
 
     // ---------- PRESENTATION ----------
     // The editor is embedded in an iframe, so it can only grow as tall as the
@@ -369,6 +414,52 @@
     }
 
     // ---------------- INIT ----------------
+    // The path exercise's diagram can only be pushed into the viewer once the iframe is
+    // actually in the page, which is never true at the point the round is read — hence
+    // here, after the render that puts it there. The interop call is cheap to repeat: it
+    // returns straight away when that frame already holds this round's drawing.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var json = _pathDiagramToLoad;
+        if (json is null) return;
+
+        // Not cleared yet: an attempt that does not land has to be made again. Only a
+        // confirmed load takes the drawing off the queue, so every later render — and
+        // this page re-renders every second for the countdown — is another chance.
+        // Repeating costs nothing once it has landed: the interop returns immediately
+        // for a frame already holding this round's drawing.
+        if (_pathDiagramLoading) return;
+        _pathDiagramLoading = true;
+
+        try
+        {
+            var loaded = await JS.InvokeAsync<bool>(
+                "diagramInterop.loadDiagram", "pathDiagramFrame", json, exerciseId.ToString(), 15000);
+
+            if (loaded)
+            {
+                _pathDiagramToLoad = null;
+            }
+            else if (!_pathDiagramWarned)
+            {
+                // Said once per round: the retries continue underneath, and a toast a
+                // second would bury the exercise.
+                _pathDiagramWarned = true;
+                toastService.ShowWarning(
+                    "The exercise diagram is taking a while to appear. Your teacher is showing it on their screen.");
+            }
+        }
+        catch
+        {
+            // Interop hiccup (a circuit that went away mid-call); the drawing stays
+            // queued and the next render tries again.
+        }
+        finally
+        {
+            _pathDiagramLoading = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         // 1. Check Authentication State
@@ -681,9 +772,18 @@
             // endpoint returns 500 for the student role (server-side permission-dictionary
             // bug), which previously aborted this method and left students on the waiting
             // screen instead of transferring to the exercise.
-            // Only the definition is read here. The image url on the same object is what the
-            // teacher's view renders; the student's screen deliberately does not show it.
+            // For a path exercise Definition is the question text and Url carries the
+            // diagram itself; a diagram exercise is the other way round, and its Url (the
+            // question text) is read out by the teacher rather than shown here.
             diagramDefinition = exercise.Diagram?.Definition;
+            pathDiagramUrl = exerciseCategory == "path" ? exercise.Diagram?.Url : null;
+
+            // Queue the drawing for the iframe. Done even when the round did not advance:
+            // a reconnect or a silent refresh re-renders this page, and a viewer that has
+            // just been re-created comes up empty until something sends it the diagram.
+            _pathDiagramToLoad = HasDrawnPathDiagram ? pathDiagramUrl : null;
+
+            if (roundAdvanced) _pathDiagramWarned = false;
 
             _deadline = info.DateTimeToNextExercise;
 
@@ -1054,7 +1154,7 @@
         if (string.IsNullOrWhiteSpace(json))
         {
             toastService.ShowWarning(
-                $"Could not capture the diagram for {item.Name} automatically — you can upload it on the results screen.");
+                $"Could not read your diagram for {item.Name} off the canvas — tell your teacher.");
             return;
         }
 
@@ -1068,7 +1168,7 @@
         catch
         {
             toastService.ShowWarning(
-                $"Could not read the diagram for {item.Name} automatically — you can upload it on the results screen.");
+                $"Could not read your diagram for {item.Name} off the canvas — tell your teacher.");
             return;
         }
 
@@ -1079,33 +1179,6 @@
                 $"{item.Name}: {item.DanglingConnectors} arrow(s) weren't attached to a node and were ignored when scoring.");
 
         await TrySubmitAsync(item, silent: true);
-    }
-
-    // Last-resort recovery on the results screen, shown only when nothing could be
-    // captured from the editor. Uploading submits immediately — there is no separate
-    // submit step for the student to remember.
-    private async Task UploadFile(InputFileChangeEventArgs e, ExerciseResult item)
-    {
-        try
-        {
-            toastService.ShowInfo($"Reading file for {item.Name}...");
-
-            using var reader = new StreamReader(e.File.OpenReadStream(long.MaxValue));
-            var inputJson = await reader.ReadToEndAsync();
-
-            item.SubmissionData = ExtractDiagramDefinitionFromUpload(inputJson, out var dangling);
-            item.DanglingConnectors = dangling;
-
-            if (dangling > 0)
-                toastService.ShowWarning(
-                    $"{item.Name}: {dangling} arrow(s) aren't attached to a node — reconnect them and re-upload so they count.");
-
-            await TrySubmitAsync(item, silent: false);
-        }
-        catch (Exception ex)
-        {
-            toastService.ShowError($"Could not read that file: {ex.Message}");
-        }
     }
 
     // ---------------- SUBMISSION (automatic) ----------------

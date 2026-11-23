@@ -17,7 +17,9 @@ services:
       MSSQL_SA_PASSWORD: "${SA_PASSWORD:-fbQ6ll9PQplNs2n}"
       MSSQL_PID: Express
     ports:
-      - "${DB_PORT:-3314}:1433"
+      # Loopback only: nothing outside the compose network talks to SQL Server, and on
+      # a classroom Wi-Fi this port must not be reachable from students' devices.
+      - "127.0.0.1:${DB_PORT:-3314}:1433"
     volumes:
       - mssql-data:/var/opt/mssql
     healthcheck:
@@ -37,6 +39,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:8080
+      # Flip to Information in .env to log every request the browser makes -- the way to
+      # tell "the phone never reached the API" apart from "it reached it and failed".
+      - Logging__LogLevel__Microsoft.AspNetCore=${API_LOG_LEVEL:-Warning}
       # Must match the worker's SERVICE_API_KEY.
       - ServiceApiKey=${SERVICE_API_KEY:-local-dev-worker-key}
       - JwtSettings__Secret=${JWT_SECRET:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
@@ -65,7 +70,8 @@ services:
       # Must match the web service's ServiceApiKey.
       SERVICE_API_KEY: ${SERVICE_API_KEY:-local-dev-worker-key}
     ports:
-      - "${WORKER_PORT:-3000}:3000"
+      # Loopback only: the worker only dials out to the game hub, nothing connects to it.
+      - "127.0.0.1:${WORKER_PORT:-3000}:3000"
     depends_on:
       - web
     restart: unless-stopped
@@ -79,6 +85,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:8080
+      # Flip to Information in .env to log every request the browser makes -- the way to
+      # tell "the phone never reached the API" apart from "it reached it and failed".
+      - Logging__LogLevel__Microsoft.AspNetCore=${API_LOG_LEVEL:-Warning}
       # Server-side calls (HttpClient, SignalR) go over the compose network.
       - Api__InternalBaseUrl=http://web:8080
       # The iframe URL is resolved by the student's browser, so it needs an address the

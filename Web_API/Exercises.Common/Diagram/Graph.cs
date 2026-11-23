@@ -216,6 +216,17 @@ namespace Exercises.Common.Diagram
             var correctAnswersInitial = correct.ToList();
             var correctAnswers = correct.ToList();
 
+            // Nothing is correct here, so nothing offered can be right: every path given
+            // is an invention and earns no credit. Without this the loop below skipped its
+            // deduction (there is no per-path share to subtract when there are no correct
+            // paths) and only the redundancy penalty applied, so an answer that matched
+            // nothing at all came back as 95 out of 100 instead of 0. Two answers that
+            // agree there is nothing to give still score full marks.
+            if (correctAnswersInitial.Count == 0)
+            {
+                return answersGiven.Count == 0 ? Constants.MAX_SCORE : 0;
+            }
+
             var score = Constants.MAX_SCORE;
 
             while (answersGiven.Count < correctAnswers.Count)

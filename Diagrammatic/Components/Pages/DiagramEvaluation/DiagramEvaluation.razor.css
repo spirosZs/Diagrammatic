@@ -538,3 +538,16 @@
         transition: none;
     }
 }
+
+/* A path exercise's diagram is read, not drawn on, and it shares the page with
+   the answer box — so it takes less height than the editor stage does, and is
+   marked off as a panel rather than filling the card. */
+.eval-frame--viewer {
+    height: 42vh;
+    min-height: 260px;
+    max-height: 560px;
+    margin: var(--ds-space-3, 12px) 0;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    overflow: hidden;
+}

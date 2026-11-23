@@ -19,6 +19,22 @@ html, body {
     box-sizing: border-box;
 }
 
+/* ---------- Horizontal overflow guard ---------- */
+/* The mobile nav is an off-canvas drawer parked off the right edge with
+   transform: translateX(100%) (NavMenu.razor.css). A fixed element sitting past the
+   viewport creates no scrollbar on a desktop, but mobile browsers happily let the user
+   pan to it -- which made every page on a phone 320px wider than the screen and
+   scrollable sideways, the diagram stage and the results list included.
+
+   clip, not hidden: overflow-x: hidden forces the other axis to auto and turns the root
+   into a scroll container, which breaks the sticky navbar and the sticky submit bar on
+   the evaluation page. clip has no such side effect. hidden is declared first as the
+   fallback for engines that predate clip (iOS < 16). */
+html {
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
 /* ---------- Typography ---------- */
 h1, h2, h3, h4, h5, h6 {
     font-weight: 600;

@@ -33,6 +33,13 @@ namespace Diagrammatic_test.Services
         /// <summary>Diagram editor page, loaded into an iframe by the browser.</summary>
         public string DiagramEditorUrl => Combine(PublicBaseUrl, "diagramEvaluation");
 
+        /// <summary>
+        /// The same editor as a viewer: no toolbar, no shape tray, and a canvas that
+        /// cannot be edited. What a path exercise shows — the teacher's diagram is loaded
+        /// into it over the postMessage bridge and the student reads their paths off it.
+        /// </summary>
+        public string DiagramViewerUrl => $"{DiagramEditorUrl}?readOnly=true";
+
         private static string Combine(string baseUrl, string path) =>
             $"{baseUrl.TrimEnd('/')}/{path}";
     }

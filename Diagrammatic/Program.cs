@@ -84,11 +84,37 @@ if (httpsConfigured)
     app.UseHttpsRedirection();
 }
 
-app.UseStaticFiles();
+// Revalidate rather than reuse. diagramInterop.js is this app's half of the bridge to the
+// diagram editor, and App.razor is a component, so it cannot version the tag the way an MVC
+// view does with asp-append-version. Without this, a browser that cached the file before a
+// deploy keeps running the old bridge against the new editor — which does not look like a
+// stale script, it looks like the feature is broken. "no-cache" still allows the cached copy
+// to be reused, it just has to be checked first, and the ETag makes that a 304.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache"
+});
 app.UseAntiforgery();
 
-// Map Blazor components
+// Map Blazor components.
+//
+// AllowAnonymous is about *where* authorization happens, not whether it happens. Who the
+// user is lives in the session-storage token that AuthStateProviderService reads, which
+// only exists inside the circuit — the plain HTTP request that fetches the page carries
+// nothing the server can identify. A page component's [Authorize] still becomes endpoint
+// metadata though, so the authorization middleware tried to challenge every such request
+// and, with no authentication scheme registered in this app, threw instead: a hard refresh
+// (or a pasted link) on /create-exercise, /create-exam or /student-submissions answered
+// 500 rather than showing anything. Clicking through from the nav bar never hit it, being
+// routed inside the circuit — which is why it only ever bit on a reload.
+//
+// Letting the request through hands the decision to AuthorizeRouteView in Routes.razor,
+// which does know the user: an unauthorized visitor gets the "Access Denied" card with a
+// login link, a signed-in one gets the page. Nothing is exposed by serving the shell — the
+// data behind these pages comes from the API, which authenticates every call by bearer
+// token regardless of what this app renders.
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AllowAnonymous();
 
 app.Run();

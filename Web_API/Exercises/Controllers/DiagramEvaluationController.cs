@@ -7,10 +7,17 @@ namespace Exercises.Controllers
     [Route("diagramEvaluation")]
     public class DiagramEvaluationController : Controller
     {
+        /// <param name="readOnly">
+        /// Serve the editor as a viewer: no toolbar, no shape tray, and a canvas that
+        /// cannot be edited. Used where a diagram is shown rather than drawn — a path
+        /// exercise puts the teacher's diagram in front of the class this way, and the
+        /// host loads it over the postMessage bridge once the page is up.
+        /// </param>
         [HttpGet("")]
-        public IActionResult Index()
+        public IActionResult Index([FromQuery] bool readOnly = false)
         {
             LoadDiagramAssets();
+            ViewData["ReadOnly"] = readOnly;
             return View("DiagramEvaluation");
         }
 

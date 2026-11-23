@@ -20,6 +20,76 @@ function dgDiagram() {
     return (el && el.ej2_instances && el.ej2_instances[0]) ? el.ej2_instances[0] : null;
 }
 
+// Viewer mode, set by the ?readOnly=true query the host iframe asks for and
+// written onto the shell element by Diagram.cshtml.
+function dgIsReadOnly() {
+    var app = document.querySelector('.dg-app');
+    return !!app && app.getAttribute('data-readonly') === 'true';
+}
+
+// A diagram that arrived from the host before this page had a canvas to put it on.
+// Applied by diagramCreated(); see the 'loadDiagram' branch of the message bridge.
+var dgPendingLoad = null;
+
+// Puts a saved drawing on the canvas and tells the host it landed. Shared by the
+// message bridge and the deferred path above, so an early load and a timely one go
+// through exactly the same steps.
+function dgLoadDiagram(data, source, origin)
+{
+    var loaded = false;
+
+    try
+    {
+        diagram.loadDiagram(data);
+
+        // loadDiagram restores the saved model wholesale — including the size,
+        // constraints and tool of the canvas it was drawn on — so put this canvas's
+        // own back afterwards.
+        dgApplyReadOnly();
+        dgSizeToContainer();
+
+        // The drawing was laid out on whatever canvas it was made on; this one is a
+        // different size (a phone, a panel on the teacher's page), so bring the whole
+        // thing into view rather than showing a corner.
+        diagram.fitToPage();
+        loaded = true;
+    }
+    catch (e)
+    {
+        console.error('Could not load the diagram sent by the host page.', e);
+    }
+
+    // Answered either way: a host repeating the send every few hundred ms for a
+    // diagram that will never parse is worse than one that visibly failed once.
+    if (source)
+    {
+        source.postMessage({ action: 'diagramLoaded', ok: loaded }, origin || '*');
+    }
+
+    return loaded;
+}
+
+// Locks the canvas: a path exercise shows the teacher's diagram while the student
+// types paths off it, so it is something to read and nothing to change. Dropping
+// PageEditable blocks every edit; ZoomPan turns dragging and pinching into pan and
+// zoom, so a big diagram stays legible on a phone without anything on it moving.
+//
+// Called again after every load, not just at startup: saveDiagram() serializes the
+// whole model, constraints and current tool included, so loadDiagram() brings the
+// *drawing* editor's settings back with the drawing and would quietly hand the
+// student an editable canvas.
+function dgApplyReadOnly() {
+    // A viewer has no toolbar to cancel with.
+    if (typeof dgConnect !== 'undefined') { dgConnect.armed = false; dgConnect.sourceId = null; }
+
+    var d = dgDiagram();
+    if (!d || !dgIsReadOnly()) return;
+
+    d.constraints = ej.diagrams.DiagramConstraints.Default & ~ej.diagrams.DiagramConstraints.PageEditable;
+    d.tool = ej.diagrams.DiagramTools.ZoomPan;
+    d.dataBind();
+}
+
 // Highlights the tool that is currently armed (the toolbar is the only place
 // that shows which mode the canvas is in).
 function dgSetActiveTool(id) {
@@ -27,32 +97,210 @@ function dgSetActiveTool(id) {
     if (id) $('#' + id).addClass('active');
 }
 
-// Arms the connector tools. Draws one arrow and falls back to Select, which is
-// what you want on a touch screen: staying in draw mode turns every attempt to
-// nudge a shape into a stray arrow.
+// ---------------------------------------------------------------------------
+// Connecting two shapes
+// ---------------------------------------------------------------------------
+// Tap the source shape, then tap the target. The arrow is created between the
+// two by id, so it is attached to both ends by construction.
+//
+// This replaces drag-to-draw (drawingObject + DiagramTools.DrawOnce). On a phone
+// that gesture has to start on the source and finish on the target, with the
+// finger covering the very shape being aimed at; anything short of that drops a
+// connector with an empty sourceID/targetID. Those are the arrows checkConnectivity
+// paints red and the ones the student's results list reports as "loose arrow(s) --
+// not scored", so a slightly-off drag quietly costs marks. Two taps cannot miss.
+var DG_CONNECT_HL = '#059669';
+
+var dgConnect = { armed: false, type: 'Straight', sourceId: null };
+
+function dgConnectHint(text, transient)
+{
+    var el = document.getElementById('dg-connect-hint');
+    if (!el) return;
+
+    if (window._dgHintTimer) { clearTimeout(window._dgHintTimer); window._dgHintTimer = null; }
+
+    if (!text) { el.hidden = true; return; }
+
+    el.textContent = text;
+    el.hidden = false;
+
+    // Confirmations and refusals say their piece and get out of the way; the
+    // step prompts stay up because they are the instruction being followed.
+    if (transient) {
+        window._dgHintTimer = setTimeout(function () { el.hidden = true; }, 2200);
+    }
+}
+
+// The clicked object, but only if it is one of the shapes. Returns null for a
+// connector or for empty canvas, both of which mean "not a target".
+function dgNodeFromClick(args)
+{
+    var d = dgDiagram();
+    if (!d || !args) return null;
+
+    var obj = args.actualObject || args.element;
+    if (!obj || !obj.id) return null;
+
+    for (var i = 0; i < d.nodes.length; i++) {
+        if (d.nodes[i].id === obj.id) return d.nodes[i];
+    }
+    return null;
+}
+
+function dgFindNode(id)
+{
+    var d = dgDiagram();
+    if (!d || !id) return null;
+    for (var i = 0; i < d.nodes.length; i++) {
+        if (d.nodes[i].id === id) return d.nodes[i];
+    }
+    return null;
+}
+
+// Marks the shape the arrow will start from. Without it there is nothing on a
+// phone to say the first tap registered.
+function dgHighlightSource(node, on)
+{
+    var d = dgDiagram();
+    if (!d || !node || !node.style) return;
+
+    if (on) {
+        if (!node._dgPrevStroke) {
+            node._dgPrevStroke = { color: node.style.strokeColor, width: node.style.strokeWidth };
+        }
+        node.style.strokeColor = DG_CONNECT_HL;
+        node.style.strokeWidth = 5;
+    }
+    else if (node._dgPrevStroke) {
+        node.style.strokeColor = node._dgPrevStroke.color;
+        node.style.strokeWidth = node._dgPrevStroke.width;
+        node._dgPrevStroke = null;
+    }
+
+    d.dataBind();
+}
+
+function dgClearConnectSource()
+{
+    if (dgConnect.sourceId) {
+        dgHighlightSource(dgFindNode(dgConnect.sourceId), false);
+        dgConnect.sourceId = null;
+    }
+}
+
+function dgStartConnect(type)
+{
+    var d = dgDiagram();
+    if (!d || dgIsReadOnly()) return;
+
+    dgClearConnectSource();
+    dgConnect.armed = true;
+    dgConnect.type = type;
+
+    // Plain select: with no DrawOnce tool armed, a stray drag across the canvas
+    // can no longer leave a half-attached arrow behind.
+    d.tool = ej.diagrams.DiagramTools.SingleSelect;
+    d.dataBind();
+
+    dgConnectHint('Tap the shape the arrow starts from.');
+}
+
+function dgCancelConnect(message)
+{
+    var d = dgDiagram();
+
+    dgClearConnectSource();
+    dgConnect.armed = false;
+
+    if (d) {
+        d.tool = ej.diagrams.DiagramTools.SingleSelect | ej.diagrams.DiagramTools.MultipleSelect;
+        d.dataBind();
+    }
+
+    dgSetActiveTool('MoveTool_Tool');
+    dgConnectHint(message || null, !!message);
+}
+
+function dgConnectorExists(d, sourceId, targetId)
+{
+    for (var i = 0; i < d.connectors.length; i++) {
+        if (d.connectors[i].sourceID === sourceId && d.connectors[i].targetID === targetId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Wired from Diagram.cshtml (click="dgDiagramClick").
+function dgDiagramClick(args)
+{
+    if (!dgConnect.armed) return;
+
+    var d = dgDiagram();
+    if (!d) return;
+
+    var node = dgNodeFromClick(args);
+
+    // Tapping empty canvas (or an existing arrow) backs out, so there is a way
+    // to change your mind that does not require finding the Select button.
+    if (!node) { dgCancelConnect('Arrow cancelled.'); return; }
+
+    if (!dgConnect.sourceId) {
+        dgConnect.sourceId = node.id;
+        dgHighlightSource(node, true);
+        dgConnectHint('Now tap the shape it points to.');
+        return;
+    }
+
+    if (node.id === dgConnect.sourceId) {
+        dgConnectHint('Tap a different shape for the arrow to point to.');
+        return;
+    }
+
+    if (dgConnectorExists(d, dgConnect.sourceId, node.id)) {
+        // A double tap on the target would otherwise stack a second identical
+        // arrow on the first, where it cannot be seen or selected apart.
+        dgCancelConnect('Those shapes are already connected.');
+        return;
+    }
+
+    try {
+        d.add({
+            id: 'dgconn_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            type: dgConnect.type,
+            sourceID: dgConnect.sourceId,
+            targetID: node.id
+        });
+        dgCancelConnect('Arrow added.');
+    }
+    catch (err) {
+        console.warn('Could not add connector:', err);
+        dgCancelConnect('That arrow could not be added.');
+    }
+}
+
+// One arrow per press of the tool, matching how the button behaved before.
 $('.connectors').click(function (args) {
     var d = dgDiagram();
     if (!d) return;
 
-    var drawingObject;
-    switch (args.currentTarget.id) {
-        case 'straight':
-            drawingObject = { type: 'Straight' };
-            break;
-        case 'cubic':
-            drawingObject = { type: 'Bezier' };
-            break;
-    }
-
-    if (drawingObject) {
-        d.drawingObject = drawingObject;
-        d.tool = ej.diagrams.DiagramTools.DrawOnce;
-        d.dataBind();
-    }
+    dgStartConnect(args.currentTarget.id === 'cubic' ? 'Bezier' : 'Straight');
 });
 
 $('.tools_select').click(function () {
-    dgSetActiveTool($(this).attr('id'));
+    var id = $(this).attr('id');
+    dgSetActiveTool(id);
+
+    // Reaching for Select or Pan mid-way through an arrow means abandoning it.
+    if (id !== 'straight' && id !== 'cubic' && dgConnect.armed) {
+        dgCancelConnect();
+    }
+});
+
+// Desktop escape hatch; the canvas tap is the one that matters on a phone.
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && dgConnect.armed) dgCancelConnect('Arrow cancelled.');
 });
 
 $('.toolbarClick').click(function(){
@@ -117,16 +365,35 @@ function diagramCreated()
         return connector;
     };
 
-    // Start in select mode (the toolbar shows Select as active). Previously the
-    // canvas started in draw mode without anything to draw.
-    diagram.tool = ej.diagrams.DiagramTools.SingleSelect | ej.diagrams.DiagramTools.MultipleSelect;
-    diagram.dataBind();
+    if (dgIsReadOnly())
+    {
+        // Viewer mode (?readOnly=true): no toolbar, no shape tray, and a canvas
+        // that cannot be edited.
+        dgApplyReadOnly();
+    }
+    else
+    {
+        // Start in select mode (the toolbar shows Select as active). Previously the
+        // canvas started in draw mode without anything to draw.
+        diagram.tool = ej.diagrams.DiagramTools.SingleSelect | ej.diagrams.DiagramTools.MultipleSelect;
+        diagram.dataBind();
+    }
 
     // Deferred: 'created' fires inside the render pass, and dataBind() must not
     // re-enter it.
     dgRequestSize();
     dgWatchContainerSize();
     dgEnableTapToAdd();
+
+    // A diagram that arrived while this page was still starting up.
+    if (dgPendingLoad)
+    {
+        var pending = dgPendingLoad;
+        dgPendingLoad = null;
+        dgLoadDiagram(pending.data, pending.source, pending.origin);
+    }
+
+    dgAnnounceReady();
 }
 
 function onChangeData(args)
@@ -344,12 +611,6 @@ function toolbarClick(element)
                 diagram.remove(selected[s]);
             }
             break;
-        case "Upload_Tool":
-            document.getElementsByClassName('e-file-select-wrap')[0].querySelector('button').click();
-            break;
-        case "Download_Tool":
-            download(diagram.saveDiagram());
-            break;
         case "Redo_Tool":
             diagram.redo();
             break;
@@ -384,8 +645,11 @@ function toolbarClick(element)
 
 // Bridge for the Blazor app that embeds this editor in an iframe
 // (diagramInterop.js on the parent side). 'saveDiagram' is answered with a
-// 'diagramData' message carrying the serialized diagram; 'clearDiagram'
-// resets the canvas between game rounds, since the iframe is not reloaded.
+// 'diagramData' message carrying the serialized diagram; 'clearDiagram' resets
+// the canvas between game rounds, since the iframe is not reloaded;
+// 'loadDiagram' puts a saved drawing back on the canvas and is answered with
+// 'diagramLoaded' — the parent cannot tell when this page has finished starting
+// up, so it repeats the message until that acknowledgement comes back.
 window.addEventListener('message', function (event)
 {
     var msg = event.data;
@@ -411,42 +675,36 @@ window.addEventListener('message', function (event)
             deleted_annotations_star = [];
         }
     }
+    else if (msg.action === 'loadDiagram')
+    {
+        if (typeof msg.data !== 'string' || !msg.data) return;
+
+        // The host has no way to know when this page has finished starting up, so a
+        // load can easily arrive before Syncfusion has built the diagram. Hold on to
+        // it and put it on the canvas in diagramCreated() rather than dropping it.
+        if (!diagram)
+        {
+            dgPendingLoad = { data: msg.data, source: event.source, origin: event.origin };
+            return;
+        }
+
+        dgLoadDiagram(msg.data, event.source, event.origin);
+    }
 });
 
-function download(data)
+// Tells the host page this editor is alive and can take a diagram. Sent on startup
+// because the other direction cannot be timed from outside: the iframe's load event
+// fires long before Syncfusion has built the canvas, so a host that simply waits and
+// sends is guessing. Hearing this, it sends whatever it is holding for this frame.
+function dgAnnounceReady()
 {
-    if (window.navigator.msSaveBlob) 
+    if (window.parent && window.parent !== window)
     {
-        var blob = new Blob([data], { type: 'data:text/json;charset=utf-8,' });
-        window.navigator.msSaveOrOpenBlob(blob, 'Diagram.json');
-    } 
-    else 
-    {
-        var dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(data);
-        var a = document.createElement('a');
-        a.href = dataStr;
-        a.download = 'Diagram.json';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-    } 
+        window.parent.postMessage({ action: 'diagramViewerReady' }, '*');
+    }
 }
 
-function onUploadSuccess(args) 
-{
-    var file1 = args.file;
-    var file = file1.rawFile;
-    let reader = new FileReader();
-    reader.readAsText(file);
-    reader.onloadend = loadDiagram;
-}
-
-function loadDiagram(event) 
-{
-    diagram.loadDiagram((event.target).result);
-}
-
-function checkConnectivity(args) 
+function checkConnectivity(args)
 {    
     var all_connected = true;
     var default_color = "black";

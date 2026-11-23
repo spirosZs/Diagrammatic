@@ -6,128 +6,164 @@
     iframe. All sizing lives in newdiagram.css / newdiagram.js; nothing here is
     hard-coded in pixels.
 
+    Two modes. Normally this is a drawing surface. With ?readOnly=true it is a
+    viewer: no toolbar, no shape tray, and the canvas is locked in newdiagram.js,
+    so the diagram can be looked at but not changed. That is how a path exercise
+    shows the teacher's diagram to the class.
+
+    There is deliberately no save-to-file or open-a-file button in either mode.
+    Whatever embeds this reads the canvas over the postMessage bridge and loads
+    one back the same way, so a file on the student's or teacher's disk is never
+    part of the flow.
+
     NOTE: @section blocks are not rendered from a partial, so this file must not
     declare any — the scripts it needs are loaded by _LayoutBlank.cshtml and the
     page that includes it (DiagramEvaluation.cshtml).
 *@
 
-<div class="dg-app">
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? ?? false;
+}
 
-    <div class="dg-toolbar" role="toolbar" aria-label="Diagram tools">
+<div class="dg-app @(readOnly ? "dg-app--readonly" : null)" data-readonly="@(readOnly ? "true" : "false")">
 
-        <div class="dg-group">
-            <button type="button" id="MoveTool_Tool" class="dg-tool toolbarClick tools tools_select active"
-                    title="Select and move">
-                <i class="fas fa-mouse-pointer" aria-hidden="true"></i>
-                <span class="dg-label">Select</span>
-            </button>
+    @* Every icon here is an inline SVG rather than an icon font. The toolbar used to
+       draw them with Font Awesome off a CDN, and wherever that request does not arrive —
+       a blocking extension, an offline classroom, a locked-down school network — the
+       icon-only buttons render as blank boxes you can only find by hovering. The two
+       that were already inline SVG (Arrow, Curve) were the only ones that never broke. *@
+    @if (!readOnly)
+    {
+        <div class="dg-toolbar" role="toolbar" aria-label="Diagram tools">
 
-            <button type="button" id="straight" class="dg-tool connectors tools tools_select"
-                    title="Draw a straight arrow">
-                <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 20 L16.5 7.5" />
-                    <path d="M20 4 L17.5 11.4 L12.6 6.5 Z" fill="currentColor" stroke="none" />
-                </svg>
-                <span class="dg-label">Arrow</span>
-            </button>
+            <div class="dg-group">
+                <button type="button" id="MoveTool_Tool" class="dg-tool toolbarClick tools tools_select active"
+                        title="Select and move">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 3 L11.5 19 L13.9 12.9 L20 10.5 Z" />
+                    </svg>
+                    <span class="dg-label">Select</span>
+                </button>
 
-            <button type="button" id="cubic" class="dg-tool connectors tools tools_select"
-                    title="Draw a curved arrow">
-                <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 20 C 4 10, 9 4, 17 4" />
-                    <path d="M21 4 L16.5 6.6 L16.5 1.4 Z" fill="currentColor" stroke="none" />
-                </svg>
-                <span class="dg-label">Curve</span>
-            </button>
+                <button type="button" id="straight" class="dg-tool connectors tools tools_select"
+                        title="Draw a straight arrow">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 20 L16.5 7.5" />
+                        <path d="M20 4 L17.5 11.4 L12.6 6.5 Z" fill="currentColor" stroke="none" />
+                    </svg>
+                    <span class="dg-label">Arrow</span>
+                </button>
 
-            <button type="button" id="Pan_Tool" class="dg-tool toolbarClick tools tools_select"
-                    title="Pan the canvas">
-                <i class="fas fa-hand-paper" aria-hidden="true"></i>
-                <span class="dg-label">Pan</span>
-            </button>
+                <button type="button" id="cubic" class="dg-tool connectors tools tools_select"
+                        title="Draw a curved arrow">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 20 C 4 10, 9 4, 17 4" />
+                        <path d="M21 4 L16.5 6.6 L16.5 1.4 Z" fill="currentColor" stroke="none" />
+                    </svg>
+                    <span class="dg-label">Curve</span>
+                </button>
+
+                <button type="button" id="Pan_Tool" class="dg-tool toolbarClick tools tools_select"
+                        title="Pan the canvas">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3 L12 21 M3 12 L21 12" />
+                        <path d="M9 6 L12 3 L15 6 M9 18 L12 21 L15 18 M6 9 L3 12 L6 15 M18 9 L21 12 L18 15" />
+                    </svg>
+                    <span class="dg-label">Pan</span>
+                </button>
+            </div>
+
+            <span class="dg-sep" aria-hidden="true"></span>
+
+            <div class="dg-group">
+                <button type="button" id="Undo_Tool" class="dg-tool toolbarClick tools" title="Undo">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 5 L3 11 L9 11" />
+                        <path d="M3.7 15 A 9 9 0 1 0 6 6.3 L3 9" />
+                    </svg>
+                </button>
+                <button type="button" id="Redo_Tool" class="dg-tool toolbarClick tools" title="Redo">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 5 L21 11 L15 11" />
+                        <path d="M20.3 15 A 9 9 0 1 1 18 6.3 L21 9" />
+                    </svg>
+                </button>
+                <button type="button" id="ZoomOut_Tool" class="dg-tool toolbarClick tools" title="Zoom out">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="10.5" cy="10.5" r="6.5" />
+                        <path d="M15.5 15.5 L21 21 M7.5 10.5 L13.5 10.5" />
+                    </svg>
+                </button>
+                <button type="button" id="ZoomIn_Tool" class="dg-tool toolbarClick tools" title="Zoom in">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="10.5" cy="10.5" r="6.5" />
+                        <path d="M15.5 15.5 L21 21 M7.5 10.5 L13.5 10.5 M10.5 7.5 L10.5 13.5" />
+                    </svg>
+                </button>
+                <button type="button" id="FitToPage_Tool" class="dg-tool toolbarClick tools" title="Fit to screen">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 3 H5 a2 2 0 0 0 -2 2 v4 M15 3 h4 a2 2 0 0 1 2 2 v4 M21 15 v4 a2 2 0 0 1 -2 2 h-4 M3 15 v4 a2 2 0 0 0 2 2 h4" />
+                    </svg>
+                </button>
+            </div>
+
+            <span class="dg-sep" aria-hidden="true"></span>
+
+            <div class="dg-group">
+                <button type="button" id="DeleteSelection_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
+                        title="Delete what is selected">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3.5 6 H20.5" />
+                        <path d="M18.5 6 L17.6 20 a2 2 0 0 1 -2 1.9 H8.4 a2 2 0 0 1 -2 -1.9 L5.5 6" />
+                        <path d="M9 6 V4 a2 2 0 0 1 2 -2 h2 a2 2 0 0 1 2 2 v2" />
+                        <path d="M10 11 V17 M14 11 V17" />
+                    </svg>
+                    <span class="dg-label">Delete</span>
+                </button>
+                <button type="button" id="Delete_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
+                        title="Clear the whole canvas">
+                    <svg class="dg-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 21 H21" />
+                        <path d="M14.6 3.9 L20.1 9.4 a2 2 0 0 1 0 2.8 l-7.3 7.3 a2 2 0 0 1 -2.8 0 l-5.5 -5.5 a2 2 0 0 1 0 -2.8 l7.3 -7.3 a2 2 0 0 1 2.8 0 z" />
+                        <path d="M7.5 8.5 L15.5 16.5" />
+                    </svg>
+                    <span class="dg-label">Clear</span>
+                </button>
+            </div>
+
         </div>
-
-        <span class="dg-sep" aria-hidden="true"></span>
-
-        <div class="dg-group">
-            <button type="button" id="Undo_Tool" class="dg-tool toolbarClick tools" title="Undo">
-                <i class="fas fa-undo" aria-hidden="true"></i>
-            </button>
-            <button type="button" id="Redo_Tool" class="dg-tool toolbarClick tools" title="Redo">
-                <i class="fas fa-redo" aria-hidden="true"></i>
-            </button>
-            <button type="button" id="ZoomOut_Tool" class="dg-tool toolbarClick tools" title="Zoom out">
-                <i class="fas fa-search-minus" aria-hidden="true"></i>
-            </button>
-            <button type="button" id="ZoomIn_Tool" class="dg-tool toolbarClick tools" title="Zoom in">
-                <i class="fas fa-search-plus" aria-hidden="true"></i>
-            </button>
-            <button type="button" id="FitToPage_Tool" class="dg-tool toolbarClick tools" title="Fit to screen">
-                <i class="fas fa-expand-arrows-alt" aria-hidden="true"></i>
-            </button>
-        </div>
-
-        <span class="dg-sep" aria-hidden="true"></span>
-
-        <div class="dg-group">
-            <button type="button" id="DeleteSelection_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
-                    title="Delete what is selected">
-                <i class="far fa-trash-alt" aria-hidden="true"></i>
-                <span class="dg-label">Delete</span>
-            </button>
-            <button type="button" id="Delete_Tool" class="dg-tool dg-tool--danger toolbarClick tools"
-                    title="Clear the whole canvas">
-                <i class="fas fa-eraser" aria-hidden="true"></i>
-                <span class="dg-label">Clear</span>
-            </button>
-        </div>
-
-        <span class="dg-spacer" aria-hidden="true"></span>
-
-        <div class="dg-group">
-            <button type="button" id="Upload_Tool" class="dg-tool toolbarClick tools" title="Open a saved diagram">
-                <i class="far fa-folder-open" aria-hidden="true"></i>
-                <span class="dg-label">Open</span>
-            </button>
-            <button type="button" id="Download_Tool" class="dg-tool toolbarClick tools" title="Save to a file">
-                <i class="fas fa-file-download" aria-hidden="true"></i>
-                <span class="dg-label">Save</span>
-            </button>
-        </div>
-
-    </div>
+    }
 
     <div class="dg-workspace">
 
         <div class="dg-canvas" id="diagram-canvas">
             <ejs-diagram created="diagramCreated" id="diagram" width="100%" height="100%"
-                         drop="drop" collectionChange="collectionChange">
+                         drop="drop" collectionChange="collectionChange" click="dgDiagramClick">
                 <e-diagram-rulersettings showRulers="false" dynamicGrid="true"></e-diagram-rulersettings>
             </ejs-diagram>
+
+            @* Says which tap comes next while an arrow is being made, and confirms or
+               refuses afterwards. Driven by dgConnectHint() in newdiagram.js. *@
+            <p class="dg-connect-hint" id="dg-connect-hint" role="status" aria-live="polite" hidden></p>
         </div>
 
-        <div class="dg-palette" id="palette-space">
-            <div class="dg-palette-body">
-                <ejs-symbolpalette id="symbolpalette" allowDrag="true" enableAnimation="false"
-                                   getNodeDefaults="@ViewBag.getNodeDefaults" symbolHeight="72" symbolWidth="72"
-                                   getSymbolInfo="@ViewBag.getSymbolInfo" palettes="@ViewBag.palettes">
-                </ejs-symbolpalette>
-            </div>
+        @if (!readOnly)
+        {
+            <div class="dg-palette" id="palette-space">
+                <div class="dg-palette-body">
+                    <ejs-symbolpalette id="symbolpalette" allowDrag="true" enableAnimation="false"
+                                       getNodeDefaults="@ViewBag.getNodeDefaults" symbolHeight="72" symbolWidth="72"
+                                       getSymbolInfo="@ViewBag.getSymbolInfo" palettes="@ViewBag.palettes">
+                    </ejs-symbolpalette>
+                </div>
 
-            <p class="dg-hint">
-                Drag a shape onto the canvas — or just tap it. Then pick
-                <strong>Arrow</strong> and drag from one shape to another to connect them.
-            </p>
-
-            @* Kept in the DOM (visually hidden) because the Open button clicks its
-               file input programmatically — display:none would break that. *@
-            <div class="dg-uploader">
-                <ejs-uploader id="fileupload" success="onUploadSuccess">
-                    <e-uploader-asyncsettings saveUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Save" removeUrl="https://aspnetmvc.syncfusion.com/services/api/uploadbox/Remove">
-                    </e-uploader-asyncsettings>
-                </ejs-uploader>
+                <p class="dg-hint">
+                    Drag a shape onto the canvas — or just tap it. Then pick
+                    <strong>Arrow</strong>, tap the shape it starts from, and tap the
+                    shape it points to.
+                </p>
             </div>
-        </div>
+        }
 
     </div>
 

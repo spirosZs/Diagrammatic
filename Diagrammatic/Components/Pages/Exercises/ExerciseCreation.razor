@@ -6,16 +6,15 @@
 @using Diagrammatic_test.Components.Shared.Dto
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Hosting
 @using System.Globalization
-@using System.IO
 @using System.Text.Json
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
-@inject IWebHostEnvironment HostEnvironment
+@inject IJSRuntime JS
+@inject IOptions<ApiOptions> ApiOptions
 @inherits LayoutComponentBase
 @attribute [StreamRendering]
 @attribute [Authorize(Roles = "Teacher")]
@@ -70,20 +69,7 @@
     @if (_exercise.Category == "path")
     {
         <div class="form-group">
-            <label>Diagram image (upload a .png or .jpg)</label>
-            <InputFile OnChange="UploadDiagramImage" accept=".png,.jpg,.jpeg" />
-            @if (_imageBytes is not null)
-            {
-                <div class="text-success mt-1">
-                    @_imageFileName selected (@FormatSize(_imageBytes.Length)).
-                </div>
-                <img src="@_imagePreview" alt="Selected diagram" class="mt-2 d-block img-thumbnail"
-                     style="max-width:320px" />
-            }
-        </div>
-
-        <div class="form-group">
-            <label>Definition (shown to the student above the image)</label>
+            <label>Definition (shown to the student above the diagram)</label>
             <textarea class="form-control"
                       rows="2"
                       placeholder="Optional. e.g. List every path from node 1 to node 9."
@@ -111,17 +97,51 @@
     @if (_exercise.Category == "diagram")
     {
         <div class="form-group">
-            <label>Diagram (upload the Diagram in .json format)</label>
-            <InputFile OnChange="UploadDiagramFile" accept=".json" />
-            @if (!string.IsNullOrEmpty(_definitionInput))
-            {
-                <div class="text-success mt-1">Diagram loaded.</div>
-            }
-        </div>
-
-        <div class="form-group">
             <label>Definition</label>
             <input class="form-control" @bind="_diagramUrl" />
+        </div>
+    }
+
+    @* Both kinds of exercise are drawn here rather than uploaded as a file. Pressing
+       Create captures the canvas through the same postMessage bridge the student's
+       answer is captured with (diagramInterop.js here, newdiagram.js in the editor),
+       so a solution is serialized by the editor's own save, exactly like the drawings
+       it will be compared against.
+
+       Deliberately one shared block rather than one per category: it keeps a single
+       iframe in the render tree, so switching the category between Path and Diagram
+       does not tear the editor down and lose what has been drawn. *@
+    @if (IsDrawnCategory)
+    {
+        <div class="form-group">
+            <label>
+                @(_exercise.Category == "path"
+                    ? "Diagram (draw what the paths are read from)"
+                    : "Diagram (draw the solution)")
+            </label>
+            <div class="exercise-diagram-frame">
+                <iframe id="exerciseDiagramFrame"
+                        title="Diagram editor"
+                        src="@ApiOptions.Value.DiagramEditorUrl"
+                        allow="fullscreen"></iframe>
+            </div>
+            <small class="form-text text-muted">
+                @if (_exercise.Category == "path")
+                {
+                    <text>
+                        Draw the diagram the class reads their paths off. Students see it
+                        during the round but cannot change it. It is captured from the canvas
+                        when you press Create.
+                    </text>
+                }
+                else
+                {
+                    <text>
+                        Draw the diagram the students' answers are scored against. It is
+                        captured from the canvas when you press Create.
+                    </text>
+                }
+            </small>
         </div>
     }
 
@@ -149,25 +169,6 @@
 
     private List<ExerciseCollectionDto> _exerciseCollections = new();
     private string? _errorMessage;
-
-    /* ===========================
-     * Path exercise image upload
-     * ===========================*/
-
-    // Where DiagramEvaluation.razor's <img src="@diagramUrl"> resolves from: this app's own
-    // wwwroot, served by UseStaticFiles. The diagram's Url is stored as "/DiagramPhotos/<file>",
-    // so the student's browser fetches it straight off the Blazor host.
-    private const string DiagramPhotosFolder = "DiagramPhotos";
-
-    private const long MaxImageBytes = 5 * 1024 * 1024;
-
-    private static readonly string[] AllowedImageExtensions = { ".png", ".jpg", ".jpeg" };
-
-    // The picked image is held in memory and only written to wwwroot on submit, so abandoning
-    // the form does not leave orphaned files behind.
-    private byte[]? _imageBytes;
-    private string? _imageFileName;
-    private string? _imagePreview;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -224,9 +225,6 @@
 
             if (_exercise.Category == "path")
             {
-                if (_imageBytes is null)
-                    throw new Exception("Please upload a .png or .jpg image for this exercise.");
-
                 // Parse paths. The server scores a path by exact string match against these,
                 // so runs of whitespace are collapsed to single spaces here exactly as
                 // DiagramEvaluation.razor does to the student's answer — otherwise "1  2 3"
@@ -254,18 +252,27 @@
                     })
                     .ToList();
 
-                // Everything else about the exercise is valid by now, so commit the image to
-                // wwwroot/DiagramPhotos and point the diagram at it. DiagramEvaluation.razor
-                // renders exactly this value as the <img> source.
-                diagram.Url = await SaveDiagramImageAsync();
+                // The diagram the paths are read from. Stored as the editor's own canvas
+                // json — positions, shapes and all — because this one is *displayed*
+                // rather than scored: the student's viewer loads it back into a locked
+                // editor, so it has to be the drawing, not the bare graph the diagram
+                // exercises keep. It takes the slot the uploaded .png used to occupy, and
+                // Diagram.Url is what both live views read for a path exercise (they tell
+                // the two apart by shape: json here, "/DiagramPhotos/..." on older rows).
+                diagram.Url = await CaptureDrawnDiagramForPathAsync();
 
                 // A path exercise has no graph json behind it, but Diagrams.Definition is NOT NULL,
                 // so it can never be left unset. DiagramEvaluation.razor prints this above the
-                // image, so it holds the exercise text — empty (not null) when there is none.
+                // diagram, so it holds the exercise text — empty (not null) when there is none.
                 diagram.Definition = _pathDefinitionInput.Trim();
             }
             else
             {
+                // Reads the drawing straight off the embedded editor. Done before anything
+                // is POSTed, so a canvas that cannot be captured fails the whole create
+                // rather than leaving a diagram row behind with no graph in it.
+                await CaptureDrawnDiagramAsync();
+
                 diagram.Url = _diagramUrl;
                 diagram.Definition = _definitionInput;
             }
@@ -314,7 +321,6 @@
                 _creditsInput = string.Empty;
                 _definitionInput = string.Empty;
                 _pathDefinitionInput = string.Empty;
-                ClearDiagramImage();
             }
             else
             {
@@ -327,119 +333,105 @@
         }
     }
 
+
     /* ===========================
-     * Path exercise image upload
+     * Canvas capture
      * ===========================*/
 
-    // Reads the picked .png/.jpg into memory and shows it back to the teacher. Nothing
-    // touches the disk until the exercise is actually created.
-    private async Task UploadDiagramImage(InputFileChangeEventArgs e)
+    // Both categories are drawn in the same editor; only what is kept differs.
+    private bool IsDrawnCategory => _exercise.Category == "path" || _exercise.Category == "diagram";
+
+    // Pulls the teacher's drawing out of the editor iframe through the postMessage
+    // bridge — the same call, and therefore the same serialization, the student's
+    // answer goes through in DiagramEvaluation.razor. Must run while the diagram
+    // fields (and so the iframe) are still on screen.
+    private async Task<string> ReadCanvasAsync()
+    {
+        string? json;
+        try
+        {
+            json = await JS.InvokeAsync<string?>(
+                "diagramInterop.getDiagram", "exerciseDiagramFrame", 3000);
+        }
+        catch
+        {
+            json = null; // iframe/interop hiccup — reported as a failed capture below
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
+            throw new Exception("Could not read the diagram from the editor. Reload the page and draw it again.");
+
+        return json!;
+    }
+
+    private DiagramDefinitionDto ReadCanvasShape(string canvasJson, out int dangling)
     {
         try
         {
-            var file = e.File;
-            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-
-            if (!AllowedImageExtensions.Contains(extension))
-                throw new Exception("Only .png, .jpg and .jpeg images are supported.");
-
-            if (file.Size > MaxImageBytes)
-                throw new Exception($"The image must be {FormatSize(MaxImageBytes)} or smaller.");
-
-            using var stream = file.OpenReadStream(MaxImageBytes);
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer);
-
-            _imageBytes = buffer.ToArray();
-            _imageFileName = file.Name;
-
-            // Preview only — the stored file is written to wwwroot on submit.
-            var contentType = extension == ".png" ? "image/png" : "image/jpeg";
-            _imagePreview = $"data:{contentType};base64,{Convert.ToBase64String(_imageBytes)}";
-
-            toastService.ShowSuccess("Image loaded.");
+            return ExtractDiagramDefinition(canvasJson, out dangling);
         }
         catch (Exception ex)
         {
-            ClearDiagramImage();
-            toastService.ShowError($"Failed to read image: {ex.Message}");
+            throw new Exception($"Could not read the diagram from the editor: {ex.Message}");
         }
     }
 
-    // Writes the buffered image into wwwroot/DiagramPhotos and returns the root-relative url
-    // that DiagramEvaluation.razor puts straight into its <img src>.
-    private async Task<string> SaveDiagramImageAsync()
+    // A path exercise's diagram is shown, never scored — the student reads their paths
+    // off it while it sits locked in a viewer. So the editor's own canvas json is what
+    // gets stored, geometry included; the stripped-down graph the solution diagrams keep
+    // would load back as an empty canvas.
+    private async Task<string> CaptureDrawnDiagramForPathAsync()
     {
-        var webRoot = HostEnvironment.WebRootPath
-                      ?? Path.Combine(HostEnvironment.ContentRootPath, "wwwroot");
+        var canvasJson = await ReadCanvasAsync();
+        var drawn = ReadCanvasShape(canvasJson, out var dangling);
 
-        var folder = Path.Combine(webRoot, DiagramPhotosFolder);
-        Directory.CreateDirectory(folder);
+        if (drawn.Nodes.Count == 0)
+            throw new Exception("Draw the diagram the paths are read from before creating the exercise — the canvas is empty.");
 
-        var fileName = BuildImageFileName(_imageFileName!);
-        await File.WriteAllBytesAsync(Path.Combine(folder, fileName), _imageBytes!);
+        // Nothing here is scored from the drawing, so a loose arrow costs no marks — but
+        // it is still a line the class will try to read a path along.
+        if (dangling > 0)
+            toastService.ShowWarning(
+                $"{dangling} arrow(s) aren't attached to a node — the class will see them exactly as drawn.");
 
-        return $"/{DiagramPhotosFolder}/{fileName}";
+        return canvasJson;
     }
 
-    // The teacher's file name is only a hint: it is stripped down to letters and digits and
-    // given a random suffix, so two uploads called "graph.png" cannot overwrite each other and
-    // nothing in the name can escape the DiagramPhotos folder.
-    private static string BuildImageFileName(string originalName)
+    private async Task CaptureDrawnDiagramAsync()
     {
-        var extension = Path.GetExtension(originalName).ToLowerInvariant();
+        var canvasJson = await ReadCanvasAsync();
+        var definition = ReadCanvasShape(canvasJson, out var dangling);
 
-        var stem = new string(Path.GetFileNameWithoutExtension(originalName)
-            .Select(c => char.IsLetterOrDigit(c) ? c : '-')
-            .ToArray()).Trim('-');
+        if (definition.Nodes.Count == 0)
+            throw new Exception("Draw the solution diagram before creating the exercise — the canvas is empty.");
 
-        if (stem.Length > 40)
-            stem = stem.Substring(0, 40);
+        // An arrow attached at both ends is the only thing that becomes an edge, and the
+        // graph the server scores against is built purely from edges — shapes with no
+        // arrows between them vanish from it entirely. A key like that can never be
+        // matched: it is what made a correct-looking answer come back as 95 rather than
+        // 100, so it is refused here instead of being stored.
+        var wiredArrows = definition.Connectors.Count - dangling;
 
-        if (string.IsNullOrEmpty(stem))
-            stem = "diagram";
+        if (wiredArrows == 0)
+            throw new Exception(
+                "Connect the shapes with arrows before creating the exercise — a solution with no arrows " +
+                "has nothing for an answer to match.");
 
-        return $"{stem}-{Guid.NewGuid():N}{extension}";
+        // A connector missing an endpoint adds no edge either, so the stored solution is
+        // not the diagram on screen. The rest of it is still usable, so this only warns.
+        if (dangling > 0)
+            toastService.ShowWarning(
+                $"{dangling} arrow(s) aren't attached to a node and were left out of the solution.");
+
+        _definitionInput = JsonSerializer.Serialize(definition);
     }
 
-    private void ClearDiagramImage()
+    // Identical to DiagramEvaluation.razor's ExtractDiagramDefinitionFromUpload so the
+    // answer key and the answers scored against it are normalized the exact same way.
+    private DiagramDefinitionDto ExtractDiagramDefinition(string rawJson, out int danglingConnectors)
     {
-        _imageBytes = null;
-        _imageFileName = null;
-        _imagePreview = null;
-    }
+        danglingConnectors = 0;
 
-    private static string FormatSize(long bytes) =>
-        bytes >= 1024 * 1024
-            ? $"{bytes / (1024d * 1024d):0.#} MB"
-            : $"{Math.Max(1, bytes / 1024)} KB";
-
-    private async Task UploadDiagramFile(InputFileChangeEventArgs e)
-    {
-        try
-        {
-            using var reader = new StreamReader(e.File.OpenReadStream(long.MaxValue));
-            var inputJson = await reader.ReadToEndAsync();
-
-            // Filter the uploaded diagram exactly the same way DiagramEvaluation.razor
-            // does, and store the normalized DiagramDefinitionDto so the evaluation page
-            // can consume it directly.
-            var definition = ExtractDiagramDefinitionFromUpload(inputJson);
-            _definitionInput = JsonSerializer.Serialize(definition);
-
-            toastService.ShowSuccess("Diagram loaded.");
-        }
-        catch (Exception ex)
-        {
-            _definitionInput = string.Empty;
-            toastService.ShowError($"Failed to read diagram: {ex.Message}");
-        }
-    }
-
-    // Identical to DiagramEvaluation.razor's ExtractDiagramDefinitionFromUpload so both
-    // pages normalize uploaded diagrams the exact same way.
-    private DiagramDefinitionDto ExtractDiagramDefinitionFromUpload(string rawJson)
-    {
         if (rawJson.TrimStart().StartsWith("\""))
         {
             rawJson = JsonSerializer.Deserialize<string>(rawJson)!;
@@ -494,17 +486,27 @@
             foreach (var c in connElement.EnumerateArray())
             {
                 var id = c.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
-                var sourceId = c.GetProperty("sourceID").GetString();
-                var targetId = c.GetProperty("targetID").GetString();
 
-                if (sourceId != null && targetId != null)
+                var sourceId = c.TryGetProperty("sourceID", out var srcProp) ? srcProp.GetString() : null;
+                var targetId = c.TryGetProperty("targetID", out var tgtProp) ? tgtProp.GetString() : null;
+
+                var sourceAttached = false;
+                var targetAttached = false;
+
+                if (!string.IsNullOrEmpty(sourceId) && map.TryGetValue(sourceId, out var sourceNode))
                 {
-                    if (map.TryGetValue(sourceId, out var sourceNode))
-                        sourceNode.OutEdges.Add(id);
-
-                    if (map.TryGetValue(targetId, out var targetNode))
-                        targetNode.InEdges.Add(id);
+                    sourceNode.OutEdges.Add(id);
+                    sourceAttached = true;
                 }
+
+                if (!string.IsNullOrEmpty(targetId) && map.TryGetValue(targetId, out var targetNode))
+                {
+                    targetNode.InEdges.Add(id);
+                    targetAttached = true;
+                }
+
+                if (!sourceAttached || !targetAttached)
+                    danglingConnectors++;
 
                 connectors.Add(new ConnectorDefinitionDto { Id = id });
             }

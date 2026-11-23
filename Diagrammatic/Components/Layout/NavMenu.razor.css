@@ -187,12 +187,23 @@
         border-left: 1px solid var(--ds-border);
         box-shadow: var(--ds-shadow-lg);
         transform: translateX(100%);
-        transition: transform var(--ds-duration-base) var(--ds-ease);
+        /* The closed drawer is pulled out of the tab order and the accessibility
+           tree. Left visible, its links stay focusable off-screen and tabbing into
+           one scrolls it into view, reintroducing the sideways pan the root clip
+           prevents. Delayed by the slide duration so the close still animates. */
+        visibility: hidden;
+        transition: transform var(--ds-duration-base) var(--ds-ease),
+                    visibility 0s linear var(--ds-duration-base);
         overflow-y: auto;
         z-index: 60;
     }
 
-    .ds-nav.is-open { transform: translateX(0); }
+    .ds-nav.is-open {
+        transform: translateX(0);
+        visibility: visible;
+        transition: transform var(--ds-duration-base) var(--ds-ease),
+                    visibility 0s;
+    }
 
     .ds-nav-list {
         flex-direction: column;
