@@ -9,7 +9,7 @@ namespace Exercises.Common.PropertyMapping.Dictionaries
         private readonly Dictionary<string, PropertyMappingValue> _exercisesPropertyMapping =
             new Dictionary<string, PropertyMappingValue>(StringComparer.OrdinalIgnoreCase)
             {
-                {"Category", new PropertyMappingValue(new List<string>() {"Category"})}
+                {"Description", new PropertyMappingValue(new List<string>() {"Description"})}
             };
 
         public ExerciseCollectionDictionary()

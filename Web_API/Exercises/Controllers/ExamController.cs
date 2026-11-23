@@ -25,7 +25,8 @@ namespace Exercises.Controllers
         : EntityController<Exam, ExamFilter>
     {
         private readonly IExerciseCollectionService _exerciseCollectionService;
-        
+        private readonly IExamService _examService;
+
         public ExamController(
             IServiceProvider serviceProvider,
             IHttpContextAccessor accessor, LinkGenerator generator,
@@ -35,6 +36,8 @@ namespace Exercises.Controllers
         {
             _exerciseCollectionService =
                 (IExerciseCollectionService) serviceProvider.GetService(typeof(IExerciseCollectionService));
+            _examService =
+                (IExamService) serviceProvider.GetService(typeof(IExamService));
         }
 
         /// <summary>
@@ -162,6 +165,14 @@ namespace Exercises.Controllers
                 {
                     ModelState.AddModelError("ExerciseCollectionId",
                         "You need to specify the id of the exercise collection that will be used to create this exam.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(dtoObject.ParticipationCode)
+                    && _examService.IsParticipationCodeInUse(dtoObject.ParticipationCode).Result)
+                {
+                    ModelState.AddModelError("ParticipationCode",
+                        $"The participation code {dtoObject.ParticipationCode} is already used by an exam that hasn't finished. " +
+                        "Choose another one, or leave it empty to have one generated.");
                 }
             }
 

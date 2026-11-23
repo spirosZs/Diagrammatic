@@ -1,8 +1,8 @@
-﻿@page "/create-exam"
+@page "/create-exam"
 @using Diagrammatic_test.Components.Pages.Exam.Dto
 @using Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json.Linq
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject IToastService toastService
@@ -12,53 +12,177 @@
 @attribute [StreamRendering]
 @attribute [Authorize(Roles = "Teacher")]
 
-<h3>Exam Creation</h3>
+<div class="ds-page-header">
+    <h3 class="mb-0">Exams</h3>
+    <p class="ds-page-subtitle">
+        An exam is a copy of one of your exercise collections, and a game can only be played
+        once. To run a collection again, create another exam from it — the collection itself
+        is never used up.
+    </p>
+</div>
 
-<EditForm Model="_examDto" OnValidSubmit="HandleValidSubmit" FormName="examCreationForm">
-    <ChildContent Context="editFormContext">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
 
-        <div class="form-group">
-            <label for="exerciseCollectionId">Select Exercise Collection</label>
-            <select id="exerciseCollectionId" class="form-control" @onchange="OnExerciseCollectionSelected" >
-                <option value="">-- Select --</option>
-                @foreach (var collection in _exerciseCollections)
-                {
-                        <option>@collection.Name</option>
-                }
-            </select>
+<section class="exam-block">
+    <h5>Your exercise collections</h5>
+
+    @if (!_loaded)
+    {
+        <p class="text-muted">Loading…</p>
+    }
+    else if (!_exerciseCollections.Any())
+    {
+        <div class="alert alert-info mb-0">
+            You have no exercise collections yet.
+            <a href="create-exerciseCollection">Create one</a> and add exercises to it first.
         </div>
-
-        <div class="form-group">
-            <label for="name">Exercise Collection ID</label>
-                <input id="name" class="form-control" @bind="@_examDto.ExerciseCollectionId" disabled />
+    }
+    else
+    {
+        <div class="ds-table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Collection</th>
+                        <th>Exercises</th>
+                        <th class="d-none d-md-table-cell">Duration</th>
+                        <th class="d-none d-sm-table-cell">Exams made</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var collection in _exerciseCollections)
+                    {
+                        var isSelected = _selectedCollection?.Id == collection.Id;
+                        <tr class="@(isSelected ? "exam-row-selected" : "")">
+                            <td>
+                                <div class="fw-semibold">@collection.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(collection.Description))
+                                {
+                                    <div class="exam-description">@collection.Description</div>
+                                }
+                            </td>
+                            <td>@collection.TotalExercises</td>
+                            <td class="d-none d-md-table-cell">@FormatDuration(collection.TimeToComplete)</td>
+                            <td class="d-none d-sm-table-cell">@ExamsMadeFrom(collection)</td>
+                            <td class="text-end">
+                                @if (collection.TotalExercises == 0)
+                                {
+                                    @* An exam copies the collection's exercises, and StartGame refuses
+                                       one with none — so it could never be played. *@
+                                    <span class="text-muted small">Add exercises first</span>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm @(isSelected ? "btn-primary" : "btn-outline-primary")"
+                                            @onclick="() => SelectCollection(collection)">
+                                        <span class="bi bi-plus-lg me-1"></span> Create exam
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
+    }
+</section>
 
-        <div class="form-group">
-            <label for="category">Category</label>
-                <input id="category" class="form-control" @bind="@_examDto.Category" disabled />
-        </div
+@if (_selectedCollection != null)
+{
+    <section class="ds-section exam-block">
+        <h5 class="mb-1">New exam from “@_selectedCollection.Name”</h5>
+        <p class="text-muted small mb-3">
+            @_selectedCollection.TotalExercises exercises · @FormatDuration(_selectedCollection.TimeToComplete)
+        </p>
 
-        <div class="form-group"> 
-            <label for="participationCode">Participation Code</label> 
-            <input id="participationCode" class="form-control" @bind="@_examDto.ParticipationCode" />
+        <form @onsubmit="CreateExamAsync">
+            <div class="form-group mb-3">
+                <label for="examName">Exam name</label>
+                <input id="examName" class="form-control" @bind="_examDto.Name" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="participationCode">Participation code</label>
+                <input id="participationCode" class="form-control" @bind="_examDto.ParticipationCode"
+                       placeholder="Leave empty to generate one" />
+                <div class="form-text">Students enter this code to join the game.</div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@_creating">
+                    @(_creating ? "Creating…" : "Create exam")
+                </button>
+                <button type="button" class="btn btn-ghost" @onclick="ClearSelection" disabled="@_creating">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </section>
+}
+
+<section class="exam-block">
+    <h5>Your exams</h5>
+
+    @if (_loaded && !_exams.Any())
+    {
+        <p class="text-muted mb-0">You haven't created any exams yet.</p>
+    }
+    else if (_loaded)
+    {
+        <div class="ds-table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Exam</th>
+                        <th>Code</th>
+                        <th class="d-none d-sm-table-cell">Exercises</th>
+                        <th>Status</th>
+                        <th class="d-none d-md-table-cell">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var exam in _exams)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@exam.Name</td>
+                            <td><code>@exam.ParticipationCode</code></td>
+                            <td class="d-none d-sm-table-cell">@exam.TotalExercises</td>
+                            <td>
+                                @if (IsOver(exam))
+                                {
+                                    <span class="badge bg-secondary">Finished</span>
+                                }
+                                else if (exam.DateStarted != null)
+                                {
+                                    <span class="badge exam-badge-live">In progress</span>
+                                }
+                                else
+                                {
+                                    <a class="badge exam-badge-ready" href="start-game">Ready to start</a>
+                                }
+                            </td>
+                            <td class="d-none d-md-table-cell">@exam.Created.ToString("dd MMM yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-        <br />
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </ChildContent>
-</EditForm>
+    }
+</section>
 
 @code {
-    private ExamCreateDto _examDto;
-    private List<ExerciseCollectionDto> _exerciseCollections;
-    private string _errorMessage= "";
-
-    protected override async Task OnInitializedAsync()
-    {
-        _examDto = new ExamCreateDto();
-        _exerciseCollections = new List<ExerciseCollectionDto>();
-    }
+    private ExamCreateDto _examDto = new();
+    private List<ExerciseCollectionDto> _exerciseCollections = new();
+    private List<ExamDto> _exams = new();
+    private ExerciseCollectionDto? _selectedCollection;
+    private bool _loaded;
+    private bool _creating;
+    private string _errorMessage = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -66,88 +190,163 @@
         {
             // Check Auth safely
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            if (!authState.User.Identity.IsAuthenticated)
+            if (authState.User.Identity?.IsAuthenticated != true)
             {
                 toastService.ShowError("You are not authorized to view this page.");
                 NavigationManager.NavigateTo("/");
                 return;
             }
 
-            // Load Data safely
-            await LoadExerciseCollections();
-            
-            // Force the UI to refresh now that we have data
+            // Session storage needs JS interop, which is only available after the first render.
+            await LoadAsync();
             StateHasChanged();
         }
     }
 
-    private async Task LoadExerciseCollections()
+    private async Task<HttpClient> CreateClientAsync()
+    {
+        var token = await SessionStorage.GetItemAsync<string>("authToken");
+        var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        return httpClient;
+    }
+
+    // Both lists are already limited to the signed-in teacher by the API (ViewOwn).
+    private async Task LoadAsync()
     {
         try
         {
-            // This now works because OnAfterRender ensures JS Interop is available
-            var token = await SessionStorage.GetItemAsync<string>("authToken");
-            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var httpClient = await CreateClientAsync();
 
-            _exerciseCollections = await httpClient.GetAllPagesAsync<ExerciseCollectionDto>("/api/exerciseCollection");
+            _exerciseCollections = (await httpClient.GetAllPagesAsync<ExerciseCollectionDto>("/api/exerciseCollection"))
+                .OrderBy(c => c.Name)
+                .ToList();
+
+            await LoadExamsAsync(httpClient);
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load exercise collections. {ex.Message}";
+            _errorMessage = $"Failed to load your collections and exams. {ex.Message}";
         }
-    
-    }
-
-    private void OnExerciseCollectionSelected(ChangeEventArgs e)
-    {
-        var selectedName = e.Value?.ToString();
-
-        if (!string.IsNullOrEmpty(selectedName))
+        finally
         {
-            var selectedCollection = _exerciseCollections.FirstOrDefault(c => c.Name == selectedName);
-            if (selectedCollection != null)
-            {
-                _examDto.ExerciseCollectionId = selectedCollection.Id;
-                _examDto.Name = selectedCollection.Name;
-                _examDto.Category = selectedCollection.Category;
-            }
-            else
-            {
-                toastService.ShowError("Selected exercise collection not found.");
-            }
-        }
-        else
-        {
-            _examDto.ExerciseCollectionId = Guid.Empty;
-            _examDto.Name = string.Empty;
-            _examDto.Category = string.Empty;
+            _loaded = true;
         }
     }
 
-
-    private async Task HandleValidSubmit()
+    private async Task LoadExamsAsync(HttpClient httpClient)
     {
+        _exams = (await httpClient.GetAllPagesAsync<ExamDto>("/api/exam"))
+            .OrderByDescending(e => e.Created)
+            .ToList();
+    }
+
+    private void SelectCollection(ExerciseCollectionDto collection)
+    {
+        _selectedCollection = collection;
+        _errorMessage = "";
+        _examDto = new ExamCreateDto
+        {
+            ExerciseCollectionId = collection.Id,
+            Description = collection.Description,
+            Name = SuggestExamName(collection)
+        };
+    }
+
+    private void ClearSelection()
+    {
+        _selectedCollection = null;
+        _examDto = new ExamCreateDto();
+    }
+
+    private async Task CreateExamAsync()
+    {
+        if (_selectedCollection == null) return;
+
+        if (string.IsNullOrWhiteSpace(_examDto.Name))
+        {
+            _errorMessage = "Give the exam a name.";
+            return;
+        }
+
+        _creating = true;
+        _errorMessage = "";
         try
         {
-            var token = await SessionStorage.GetItemAsync<string>("authToken");
-            var httpClient = HttpClientFactory.CreateClient("DiagrammaticClient");
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            _examDto.Name = _examDto.Name.Trim();
+            // Left empty, the API generates a code that no unfinished exam is using.
+            _examDto.ParticipationCode = _examDto.ParticipationCode?.Trim() ?? string.Empty;
 
+            var httpClient = await CreateClientAsync();
             var response = await httpClient.PostAsJsonAsync("/api/exam", _examDto);
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                toastService.ShowSuccess("Exam created successfully!");
+                _errorMessage = ReadApiError(await response.Content.ReadAsStringAsync(), response.StatusCode);
+                return;
             }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Error creating exam: {response.StatusCode}, {errorContent}");
-            }
+
+            var created = await response.Content.ReadFromJsonAsync<ExamDto>();
+            toastService.ShowSuccess($"Exam “{created?.Name}” created. Participation code: {created?.ParticipationCode}");
+
+            // Keep the collection list as it is: it can be used again for the next exam.
+            ClearSelection();
+            await LoadExamsAsync(httpClient);
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Error creating exam. {ex.Message}";
         }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    // Exams don't record which collection they were copied from, so this counts the ones
+    // still carrying the name this page suggests for it.
+    private int ExamsMadeFrom(ExerciseCollectionDto collection) =>
+        _exams.Count(e => e.Name != null
+                          && (e.Name == collection.Name || e.Name.StartsWith($"{collection.Name} #")));
+
+    // Several exams from one collection would otherwise all share its name and be
+    // indistinguishable in the Start Game list.
+    private string SuggestExamName(ExerciseCollectionDto collection) =>
+        $"{collection.Name} #{ExamsMadeFrom(collection) + 1}";
+
+    // Same rule the API uses for participation codes: DateEnded is only stamped when
+    // something settles the game, so one left alone after its last round never gets it.
+    private static bool IsOver(ExamDto exam) =>
+        exam.DateEnded != null
+        || (exam.DateStarted != null && exam.DateStarted.Value.AddSeconds(exam.TimeToComplete) <= DateTime.Now);
+
+    private static string FormatDuration(int seconds)
+    {
+        var time = TimeSpan.FromSeconds(seconds);
+        return time.TotalMinutes >= 1
+            ? $"{(int) time.TotalMinutes} min {time.Seconds:00} s"
+            : $"{time.Seconds} s";
+    }
+
+    // The API answers validation failures with a ProblemDetails body whose "errors" maps
+    // each field to its messages; show those instead of the raw JSON.
+    private static string ReadApiError(string body, System.Net.HttpStatusCode status)
+    {
+        try
+        {
+            var errors = JObject.Parse(body)["errors"] as JObject;
+            var messages = errors?.Properties()
+                .SelectMany(p => p.Value.Values<string>())
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .ToList();
+            if (messages != null && messages.Any())
+            {
+                return string.Join(" ", messages);
+            }
+        }
+        catch (Newtonsoft.Json.JsonException)
+        {
+        }
+
+        return $"Error creating exam ({(int) status}).";
     }
 }

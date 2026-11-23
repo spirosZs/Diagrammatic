@@ -221,7 +221,7 @@ namespace Exercises.Data.DbContext
             {
                 Id = new Guid(EXERCISE_COLLECTION_1),
                 Name = "First Exercise Set",
-                Category = "new",
+                Description = "Mixed diagram and path exercises",
                 Created = DateTime.Now,
                 UserId = new Guid(TEACHER_1),
                 Exercises = new List<Exercise>

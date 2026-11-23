@@ -6,9 +6,9 @@ namespace Exercises.Common.ExerciseCollection
     public class ExerciseCollectionWithExercisesDto : EntityDtoBase
     {
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string Description { get; set; }
         
         /// <summary>
         /// A list with all the exercises inside this Exercise Collection.

@@ -5,8 +5,8 @@ namespace Diagrammatic_test.Components.Pages.ExerciseCollection.Dto
     public class ExerciseCollectionCreateDto : EntityCreateDtoBase
     {
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string? Description { get; set; }
     }
 }

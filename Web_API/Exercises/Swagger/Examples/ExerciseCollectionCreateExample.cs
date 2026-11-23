@@ -9,7 +9,7 @@ namespace Exercises.Swagger.Examples
             return new ExerciseCollectionCreateDto
             {
               Name  = "Dummy exercise collection",
-              Category = "new"
+              Description = "Sample exercise collection"
             };
         }
     }

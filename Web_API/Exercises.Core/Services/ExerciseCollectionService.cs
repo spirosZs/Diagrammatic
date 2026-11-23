@@ -36,12 +36,6 @@ namespace Exercises.Core.Services
             query = query
                 .IsNotExam()
                 .Include(c => c.Exercises);
-
-            if (filter.Category != null)
-            {
-                query = query
-                    .Where(d => d.Category.StartsWith(filter.Category));
-            }
         }
 
         public async Task<ExerciseCollection> AddExerciseToCollection(Guid id, Guid exerciseId,

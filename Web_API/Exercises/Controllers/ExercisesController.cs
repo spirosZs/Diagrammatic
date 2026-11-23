@@ -25,11 +25,15 @@ namespace Exercises.Controllers
     [Route(Router.Exercise)]
     public class ExerciseController : EntityController<Exercise, ExerciseFilter>
     {
+        private readonly IExerciseCollectionService _exerciseCollectionService;
+
         public ExerciseController(IServiceProvider serviceProvider, IHttpContextAccessor accessor,
             LinkGenerator generator,
             IPropertyMappingService propertyMappingService)
             : base(serviceProvider, accessor, generator, propertyMappingService)
         {
+            _exerciseCollectionService =
+                (IExerciseCollectionService) serviceProvider.GetService(typeof(IExerciseCollectionService));
         }
 
         /// <summary>
@@ -162,6 +166,31 @@ namespace Exercises.Controllers
         protected override string GetEntityUpdateType(Exercise exercise)
         {
             return exercise.ProblemType.ToString();
+        }
+
+        protected override bool OnOperationValidation(dynamic dto, Type dtoType)
+        {
+            if (!base.OnOperationValidation((object) dto, dtoType))
+            {
+                return false;
+            }
+
+            // The exercise services attach the new exercise to whatever collection id it
+            // carries, without asking who owns that collection. Looking it up through the
+            // collection service applies the same ViewOwn filter the collection list uses,
+            // so a teacher can only add exercises to their own collections.
+            if (dto is ExerciseCreateDto createDto && createDto.ExerciseCollectionId != null)
+            {
+                var exerciseCollectionRepo =
+                    _exerciseCollectionService.GetAsync(createDto.ExerciseCollectionId.Value).Result;
+                if (exerciseCollectionRepo == null)
+                {
+                    ModelState.AddModelError("ExerciseCollectionId",
+                        $"The requested exercise collection with id {createDto.ExerciseCollectionId} doesn't exist.");
+                }
+            }
+
+            return ModelState.IsValid;
         }
     }
 }

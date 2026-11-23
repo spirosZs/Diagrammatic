@@ -19,8 +19,14 @@
     </div>
 
     <div class="form-group mb-3">
-        <label for="category">Category</label>
-        <input id="category" class="form-control" @bind="_exerciseCollectionCreateDto.Category" />
+        <label for="description">Description <span class="text-muted fw-normal">(optional)</span></label>
+        <textarea id="description" class="form-control" rows="3"
+                  placeholder="e.g. Week 3 revision: shortest paths and graph modelling"
+                  @bind="_exerciseCollectionCreateDto.Description"></textarea>
+        <div class="form-text">
+            A note for yourself about what this collection covers. Whether each exercise is a
+            diagram or a path is chosen when you create the exercise, not here.
+        </div>
     </div>
 
     <button type="submit" class="btn btn-primary">Submit</button>

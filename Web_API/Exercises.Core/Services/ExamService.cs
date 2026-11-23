@@ -63,9 +63,26 @@ namespace Exercises.Core.Services
                 .ThenInclude(exercise => ((exercise as PathExercise).Diagram));
         }
 
+        protected override void OnGet(ExamFilter filter, ref IQueryable<Exam> query)
+        {
+            base.OnGet(filter, ref query);
+
+            // ExamDto's TotalExercises and TimeToComplete are computed from Exercises, which
+            // the list query otherwise never loads — every exam reported 0 of both.
+            query = query.Include(c => c.Exercises);
+        }
+
         protected override void OnBeforeCreate(Exam exam)
         {
             base.OnBeforeCreate(exam);
+
+            // An exam without a code can never be joined, so hand it one rather than
+            // creating a game nobody can enter.
+            if (string.IsNullOrWhiteSpace(exam.ParticipationCode))
+            {
+                exam.ParticipationCode = GenerateUniqueParticipationCode();
+            }
+
             var exerciseCollectionId = exam.ExerciseCollectionId;
 
             var exerciseCollection = _context
@@ -79,6 +96,13 @@ namespace Exercises.Core.Services
             if (exerciseCollection == null)
             {
                 throw new Exception($"Collection with id {exerciseCollectionId} was not found.");
+            }
+
+            // An exam is a copy of its collection, so it describes itself the same way unless
+            // the teacher wrote something of its own.
+            if (string.IsNullOrWhiteSpace(exam.Description))
+            {
+                exam.Description = exerciseCollection.Description;
             }
 
             _context.DetachEntity(exerciseCollection);
@@ -116,8 +140,63 @@ namespace Exercises.Core.Services
         {
             var query = _dbset.AsQueryable();
             OnGetSingle(ref query);
+
+            // A teacher re-runs a collection by creating another exam from it, so the same
+            // code can turn up on several exams over time. Without an order, a student
+            // entering it could be dropped into an old, finished game instead of the one
+            // the teacher is running now — prefer exams that haven't ended, newest first.
             return await query
-                .FirstOrDefaultAsync(c => c.ParticipationCode == participationCode, cancellationToken: token);
+                .Where(c => c.ParticipationCode == participationCode)
+                .OrderBy(c => c.DateEnded != null)
+                .ThenByDescending(c => c.Created)
+                .FirstOrDefaultAsync(cancellationToken: token);
+        }
+
+        public async Task<bool> IsParticipationCodeInUse(string participationCode,
+            CancellationToken token = default)
+        {
+            // Across every teacher's exams, not just the caller's: students join by code
+            // alone, so two live games sharing one would be indistinguishable to them.
+            return await ExamsNotOver()
+                .AnyAsync(c => c.ParticipationCode == participationCode, token);
+        }
+
+        /// <summary>
+        /// Exams that are waiting to be played or still have time on the clock.
+        /// </summary>
+        /// <remarks>
+        /// DateEnded alone is not enough: it is only stamped when something settles the
+        /// game, so one nobody looked at again after its last round stays "started, never
+        /// ended" forever, and would otherwise hold on to its code indefinitely.
+        /// </remarks>
+        private IQueryable<Exam> ExamsNotOver()
+        {
+            var now = DateTime.Now;
+            return _dbset
+                .AsNoTracking()
+                .Where(c => c.DateEnded == null
+                            && (c.DateStarted == null
+                                || c.DateStarted.Value.AddSeconds(c.Exercises.Sum(e => e.TimeToComplete)) > now));
+        }
+
+        private string GenerateUniqueParticipationCode()
+        {
+            // Only 9000 four-digit codes exist, so give up after a bounded number of tries
+            // rather than spinning; a clash then is still caught by the ordering in
+            // GetAsync(participationCode).
+            var code = Exam.GenerateCode();
+            for (var attempt = 0; attempt < 20; attempt++)
+            {
+                var candidate = code;
+                if (!ExamsNotOver().Any(c => c.ParticipationCode == candidate))
+                {
+                    break;
+                }
+
+                code = Exam.GenerateCode();
+            }
+
+            return code;
         }
 
         public async Task<bool> Participate(Exam exam, Guid userId, CancellationToken token = default)
@@ -207,7 +286,7 @@ namespace Exercises.Core.Services
             var exam = await CheckAndGetExam(examId, token);
             if (parameters.ResetParticipationCodeFlag)
             {
-                exam.ParticipationCode = Exam.GenerateCode();
+                exam.ParticipationCode = GenerateUniqueParticipationCode();
             }
 
             // if (parameters.RestartGameFlag)

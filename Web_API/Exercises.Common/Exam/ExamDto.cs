@@ -5,9 +5,9 @@ namespace Exercises.Common.Exam
     public class ExamDto : EntityDtoBase
     {
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string Description { get; set; }
 
         /// <summary>
         /// Date the game started, null if not started yet.

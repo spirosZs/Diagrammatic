@@ -3,8 +3,18 @@ namespace Exercises.Common.ExerciseCollection
     public class ExerciseCollectionDto : EntityDtoBase
     {
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Total time for the exercises of this collection in seconds.
+        /// </summary>
+        public int TimeToComplete { get; set; }
+
+        /// <summary>
+        /// Total number of exercises.
+        /// </summary>
+        public int TotalExercises { get; set; }
     }
 }

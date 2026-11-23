@@ -10,7 +10,7 @@ namespace Exercises.Common.Exam.Game
             {
                 Id = exam.Id,
                 Name = exam.Name,
-                Category = exam.Category,
+                Description = exam.Description,
                 Created = exam.Created,
                 HasStarted = exam.HasStarted(),
                 HasEnded = exam.HasEnded(),

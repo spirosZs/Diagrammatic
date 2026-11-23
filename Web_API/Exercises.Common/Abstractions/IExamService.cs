@@ -9,6 +9,11 @@ namespace Exercises.Common.Abstractions
     public interface IExamService : ICrudService<Data.Exam, ExamFilter, ExamCreateDto>
     {
         Task<Data.Exam> GetAsync(string participationCode, CancellationToken token = default);
+
+        /// <summary>
+        /// True when an exam that isn't over yet, owned by any teacher, already uses this code.
+        /// </summary>
+        Task<bool> IsParticipationCodeInUse(string participationCode, CancellationToken token = default);
         Task<bool> Participate(Data.Exam exam, Guid userId, CancellationToken token = default);
         Task<bool> Participate(Guid examId, Guid userId, CancellationToken token = default);
         Task<Data.Exam> StartGame(Guid examId, CancellationToken token = default);

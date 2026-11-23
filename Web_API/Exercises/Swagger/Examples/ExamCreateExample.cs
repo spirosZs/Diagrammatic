@@ -10,8 +10,7 @@ namespace Exercises.Swagger.Examples
             return new ExamCreateDto
             {
                 Name = "Create Exam Example",
-                ExerciseCollectionId = Guid.NewGuid(),
-                Category = "new"
+                ExerciseCollectionId = Guid.NewGuid()
             };
         }
     }

@@ -5,9 +5,9 @@ namespace Diagrammatic_test.Components.Pages.Game.Dto
     public class GameInfoDto : EntityDtoBase
     {
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string? Description { get; set; }
 
         /// <summary>
         /// A boolean value representing if the game has started.

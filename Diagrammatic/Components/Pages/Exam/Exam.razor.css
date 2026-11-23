@@ -1,0 +1,35 @@
+.exam-block {
+    margin-bottom: var(--ds-space-8);
+}
+
+.exam-block h5 {
+    margin-bottom: var(--ds-space-3);
+}
+
+.exam-description {
+    color: var(--ds-text-muted);
+    font-size: var(--ds-text-xs);
+    margin-top: var(--ds-space-1);
+    white-space: pre-line;
+}
+
+/* The collection whose "Create exam" form is open below the table. */
+.exam-row-selected td {
+    background-color: var(--ds-accent-soft);
+}
+
+.exam-badge-live {
+    background-color: var(--ds-warning-soft);
+    color: var(--ds-warning);
+}
+
+/* Links to Start Game, where an unplayed exam is opened in the lobby. */
+.exam-badge-ready {
+    background-color: var(--ds-success-soft);
+    color: var(--ds-success);
+    text-decoration: none;
+}
+
+.exam-badge-ready:hover {
+    text-decoration: underline;
+}

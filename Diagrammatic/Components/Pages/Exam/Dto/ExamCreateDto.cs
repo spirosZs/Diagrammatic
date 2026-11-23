@@ -12,9 +12,9 @@ namespace Diagrammatic_test.Components.Pages.Exam.Dto
         public Guid ExerciseCollectionId { get; set; }
 
         /// <summary>
-        /// A string representing a category label for this entity.
+        /// Free text describing this entity. Optional.
         /// </summary> 
-        public string Category { get; set; }
+        public string? Description { get; set; }
 
         public string ParticipationCode {  get; set; }
     }

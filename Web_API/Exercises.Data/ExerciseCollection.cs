@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Exercises.Data.Types;
@@ -8,7 +7,11 @@ namespace Exercises.Data
 {
     public class ExerciseCollection : Entity
     {
-        [Required] public string Category { get; set; }
+        /// <summary>
+        /// Free text the teacher writes to describe the collection. Optional. Not to be
+        /// confused with Exercise.Category, which is the problem type ("diagram"/"path").
+        /// </summary>
+        public string Description { get; set; }
 
         public int TimeToComplete => Exercises.Select(x => x.TimeToComplete).Sum();
 
